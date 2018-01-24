@@ -2,6 +2,9 @@ from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_a
 import numpy as np 
 import os
 import glob
+import shutil
+import fnmatch
+import random
 #import cv2
 #from libtiff import TIFF
 
@@ -135,19 +138,63 @@ class myAugmentation(object):
 
 class dataProcess(object):
 
-	def __init__(self, out_rows, out_cols, data_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Labelled Photos", label_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Three Class Labels", test_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Test Data", npy_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata", img_type = "png"):
+	def __init__(self, out_rows, out_cols, train_test_split, data_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Labelled Photos", label_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Three Class Labels", test_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Test Data", train_data_path = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Shuffled Data/Labelled Images Train and Val', test_data_path='/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Shuffled Data/Labelled Images Test', train_label_path ='/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Shuffled Data/Labels Train and Val', test_label_path ='/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Shuffled Data/Labels Test', npy_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata", img_type = "png"):
 
 		"""
 		
 		"""
-
 		self.out_rows = out_rows
 		self.out_cols = out_cols
+		self.train_test_split = train_test_split
 		self.data_path = data_path
 		self.label_path = label_path
 		self.img_type = img_type
 		self.test_path = test_path
+		self.train_data_path = train_data_path
+		self.test_data_path = test_data_path
+		self.train_label_path = train_label_path
+		self.test_label_path = test_label_path
 		self.npy_path = npy_path
+
+	# def move_images_train_test(self): # doesn't work
+	# 	labelled_images = glob.glob(self.data_path+"/*."+self.img_type)
+	# 	labels = glob.glob(self.label_path+"/*."+self.img_type)
+	# 	# no_of_images = len(fnmatch.filter(os.listdir(self.data_path), '*.png'))
+	# 	# x_test_size = int(no_of_images *(1-self.train_test_split))
+	# 	# print(x_test_size)
+	# 	# # indices_shuffled = np.random.choice(no_of_images, no_of_images, replace =False)
+
+	# 	# i_test_images = 0
+	# 	# for f_img in labelled_images:
+	# 	# 	if np.random.randint(0,10,1)<4:
+	# 	# 		shutil.move(f_img, self.train_data_path)
+	# 	# 		# shutil.copy(f_lab, self.train_label_path)
+
+	# 	# 	elif i_test_images<=x_test_size:
+	# 	# 		shutil.move(f_img, self.test_data_path)		
+	# 	# 		i_test_images+=1
+	# 	# 		print(i_test_images)
+
+	# 	# 		# shutil.copy(f_lab, self.test_label_path)	
+
+	# 	# labelled_images = os.listdir(os.path.join(self.data_path, '/*.'+self.img_type))
+	# 	# labels = os.listdir(os.path.join(self.label_path, '/*.'+self.img_type))
+	# 	no_of_images = len(fnmatch.filter(os.listdir(self.data_path), '*.png'))
+	# 	x_train_size = int(no_of_images *self.train_test_split)
+
+	# 	np.random.seed(2)
+	# 	# for f_img, f_lab in zip(*random.sample(list(zip(labelled_images, labels)), 5)):
+	# 	# 	shutil.copy(f_img, self.train_data_path)
+	# 	# # for f_lab in random.Random(500).sample(labels, x_train_size):
+	# 	# 	shutil.copy(f_lab, self.train_label_path)
+
+	# 	f_img, f_lab = zip(*random.sample(list(zip(labelled_images, labels)), 5))
+
+	# 	print(f_img)
+	# 	print(f_lab)
+
+
+
 
 	def create_train_data(self):
 		i = 0
@@ -233,7 +280,8 @@ if __name__ == "__main__":
 	#aug.Augmentation()
 	#aug.splitMerge()
 	#aug.splitTransform()
-	mydata = dataProcess(2000,2000)
+	mydata = dataProcess(200,200, 0.8)
+	# mydata.move_images_train_test()
 	mydata.create_train_data()
 	mydata.create_test_data()
 	#imgs_train,imgs_mask_train = mydata.load_train_data()

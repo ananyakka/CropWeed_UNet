@@ -8,20 +8,22 @@ from keras.models import *
 from keras.layers import Input, merge, Conv2D, MaxPooling2D, UpSampling2D, Dropout, Cropping2D, Activation
 from keras.activations import softmax
 from keras.optimizers import *
-from keras.callbacks import ModelCheckpoint, LearningRateScheduler
+from keras.callbacks import ModelCheckpoint, LearningRateScheduler, EarlyStopping
 from keras import backend as keras
 from data import *
+from PIL import Image
+import cv2
 
 class myUnet(object):
 
-	def __init__(self, img_rows = 2000, img_cols = 2000):
+	def __init__(self, img_rows = 200, img_cols = 200):
 
 		self.img_rows = img_rows
 		self.img_cols = img_cols
 
 	def load_data(self):
 
-		mydata = dataProcess(self.img_rows, self.img_cols)
+		mydata = dataProcess(self.img_rows, self.img_cols, 0.8)
 		imgs_train, imgs_mask_train = mydata.load_train_data()
 		imgs_test = mydata.load_test_data()
 		return imgs_train, imgs_mask_train, imgs_test
@@ -183,7 +185,8 @@ class myUnet(object):
 
 		model_checkpoint = ModelCheckpoint('unet.hdf5', monitor='loss',verbose=1, save_best_only=True)
 		print('Fitting model...')
-		model.fit(imgs_train, imgs_mask_train, batch_size=4, nb_epoch=500, verbose=1,validation_split=0.5, shuffle=True, callbacks=[model_checkpoint])
+		early_stopping = EarlyStopping(monitor='val_loss', patience=2)
+		model.fit(imgs_train, imgs_mask_train, batch_size=4, nb_epoch=500, verbose=1,validation_split=0.2, shuffle=True, callbacks=[model_checkpoint, early_stopping])
 
 		print('predict test data')
 		imgs_mask_test = model.predict(imgs_test, batch_size=1, verbose=1)
@@ -199,16 +202,44 @@ class myUnet(object):
 		if not os.path.exists('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/results'):
 			os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/results')
 		if not os.path.exists('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/results_test_images'):
-			os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/results_test_images')
+			os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/results_test_images')			
+		if not os.path.exists('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/results_combined'):
+			os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/results_combined')
+
 
 		for i in range(imgs_mask.shape[0]):
+			print(i)
 			img = imgs_mask[i]
+			# print(img.size)
 			img = array_to_img(img)
 			img.save("/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/results/%d.jpg"%(i))
-			img = imgs_test[i]
+			img = imgs_test[i]	
 			img = array_to_img(img)
 			img.save("/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/results_test_images/%d.jpg"%(i))
 
+			# add translucent label(img1) to original image(img2)
+			filepath1 = os.path.join("/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/results/", str(i)+'.jpg')
+			img1 = cv2.imread(filepath1)
+			img4 = img1[:,:,1]
+
+			filepath2 = os.path.join("/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/results_test_images/", str(i)+'.jpg')
+			img2 = cv2.imread(filepath2)
+
+			img3 = cv2.addWeighted(img1, 0.4, img2, 0.6, 0)
+
+			filepath3 = os.path.join("/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/results_combined/", str(i)+'.jpg')
+			cv2.imwrite(filepath3, img3)
+
+
+			# print(type(img1))
+			# print(img2.size)
+			# print(type(img2))
+			
+			# img2 = cv2.addWeighted(img1, 0.4, img2, 0.6, 0)
+			# filepath = os.path.join("/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/results_combined/", str(i)+'.jpg')
+			# print(type(img2))
+			# img2 = array_to_img(img2)
+			# cv2.imwrite(filepath, img2)
 
 if __name__ == '__main__':
 	myunet = myUnet()
