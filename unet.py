@@ -183,9 +183,9 @@ class myUnet(object):
 		model = self.get_unet()
 		print("got unet")
 
-		model_checkpoint = ModelCheckpoint('unet.hdf5', monitor='loss',verbose=1, save_best_only=True)
+		model_checkpoint = ModelCheckpoint('unet.hdf5', monitor='val_loss',verbose=1, save_best_only=True)
 		print('Fitting model...')
-		early_stopping = EarlyStopping(monitor='val_loss', patience=2)
+		early_stopping = EarlyStopping(monitor='val_loss', min_delta = 0, patience=5)
 		model.fit(imgs_train, imgs_mask_train, batch_size=4, nb_epoch=500, verbose=1,validation_split=0.2, shuffle=True, callbacks=[model_checkpoint, early_stopping])
 
 		print('predict test data')
