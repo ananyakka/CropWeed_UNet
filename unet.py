@@ -11,6 +11,7 @@ from keras.optimizers import *
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler, EarlyStopping
 from keras import backend as keras
 from data import *
+from train_params import *
 from PIL import Image
 import cv2
 
@@ -165,7 +166,11 @@ class myUnet(object):
 		model = Model(input = inputs, output =out)
 		model.summary()
 
-		model.compile(optimizer = Adam(lr = 1e-4), loss = 'categorical_crossentropy', metrics = ['accuracy'])
+		# model.compile(optimizer = Adam(lr = 1e-4), loss = 'categorical_crossentropy', metrics = ['accuracy'])
+		# model.compile(optimizer = Adam(lr = 1e-4), loss = jaccard_cross_entropy_loss, metrics = [ jaccard_coef])
+		# model.compile(optimizer = Adam(lr = 1e-4), loss = dice_cross_entropy_loss, metrics = [ dice_coef])
+		model.compile(optimizer = Adam(lr = 1e-4), loss = dice_cross_entropy_loss, metrics = [ dice_coef])
+		
 
 		return model
 
@@ -208,7 +213,7 @@ class myUnet(object):
 
 
 		for i in range(imgs_mask.shape[0]):
-			print(i)
+			# print(i)
 			img = imgs_mask[i]
 			# print(img.size)
 			img = array_to_img(img)

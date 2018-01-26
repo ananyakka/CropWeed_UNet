@@ -141,7 +141,7 @@ class dataProcess(object):
 	def __init__(self, out_rows, out_cols, train_test_split, data_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Labelled Photos", label_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Three Class Labels", test_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Masked Photos Green/All Images", train_data_path = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Shuffled Data/Labelled Images Train and Val', test_data_path='/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Shuffled Data/Labelled Images Test', train_label_path ='/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Shuffled Data/Labels Train and Val', test_label_path ='/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Shuffled Data/Labels Test', npy_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata", img_type = "png"):
 
 		"""
-		
+
 		test_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Test Data"
 		"""
 		self.out_rows = out_rows
@@ -233,9 +233,10 @@ class dataProcess(object):
 		print('-'*30)
 		print('Creating test images...')
 		print('-'*30)
-		imgs = glob.glob(self.test_path+"/*."+self.img_type)
+		imgs = glob.glob(self.test_path+"/*.JPG")
+		imgs2 = glob.glob(self.test_path+"/*.jpg")
 		print(len(imgs))
-		imgdatas = np.ndarray((len(imgs),self.out_rows,self.out_cols,3), dtype=np.uint8)
+		imgdatas = np.ndarray(((len(imgs)+len(imgs2)),self.out_rows,self.out_cols,3), dtype=np.uint8)
 		for imgname in imgs:
 			midname = imgname[imgname.rindex("/")+1:]
 			img = load_img(self.test_path + "/" + midname,grayscale = False, target_size=(self.out_rows,self.out_cols),interpolation='nearest')
@@ -244,7 +245,20 @@ class dataProcess(object):
 			#img = np.array([img])
 			imgdatas[i] = img
 			i += 1
-		print('loading done')
+		print('loading JPG done')
+
+		
+		print(len(imgs2))
+		for imgname in imgs2:
+			midname = imgname[imgname.rindex("/")+1:]
+			img = load_img(self.test_path + "/" + midname,grayscale = False, target_size=(self.out_rows,self.out_cols),interpolation='nearest')
+			img = img_to_array(img)
+			#img = cv2.imread(self.test_path + "/" + midname,cv2.IMREAD_GRAYSCALE)
+			#img = np.array([img])
+			imgdatas[i] = img
+			i += 1
+		print('loading jpg done')
+
 		np.save(self.npy_path + '/imgs_test.npy', imgdatas)
 		print('Saving to imgs_test.npy files done.')
 
