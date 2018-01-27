@@ -182,35 +182,32 @@ def random_erasing(image, rectangle_area):
 
 
 
-img = cv2.imread('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Labelled Photos/newIMG_1394.png')
+# img = cv2.imread('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Labelled Photos/newIMG_1394.png')
 
-angle = 60
-rows,cols, channels = img.shape
+# angle = 60
+# rows,cols, channels = img.shape
 
 img2 = rotate_max_area(img, angle)
 
-M = cv2.getRotationMatrix2D((cols/2, rows/2), angle, 1)
-rotated_image = cv2.warpAffine(img, M, (cols, rows))
+# M = cv2.getRotationMatrix2D((cols/2, rows/2), angle, 1)
+# rotated_image = cv2.warpAffine(img, M, (cols, rows))
 
-cv2.imshow('original image', img)
-cv2.imshow('biggest rotated image', img2)
-cv2.imshow('basic rotated image', rotated_image)
+# cv2.imshow('original image', img)
+# cv2.imshow('biggest rotated image', img2)
+# cv2.imshow('basic rotated image', rotated_image)
 
-fullnewfilename = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/"+'newIMG_1394_original.png'
-cv2.imwrite(fullnewfilename, img)
+# fullnewfilename = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/"+'newIMG_1394_original.png'
+# cv2.imwrite(fullnewfilename, img)
 
-fullnewfilename = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/"+'newIMG_1394_biggest_rotated.png'
-cv2.imwrite(fullnewfilename, img2)
+# fullnewfilename = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/"+'newIMG_1394_biggest_rotated.png'
+# cv2.imwrite(fullnewfilename, img2)
 
 fullnewfilename = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/"+'newIMG_1394_rotated.png'
 cv2.imwrite(fullnewfilename, rotated_image)
 
 # resized_image = cv2.resize(img, (image_size, image_size), interpolation=cv2.INTER_NEAREST) 
 
-#Target size
-row_size = 200
-col_size = 200
-seed = 1
+
 
 # Flip Image ( Horizontal flip, Vertical Flip)
 
@@ -237,3 +234,50 @@ gaussian_noise_imgs = add_gaussian_noise(X_imgs)
 # Shear image
 # random_shear(image, shear_angle) # have to add artificial pixel to points outside boundary
 #https://github.com/mdbloice/Augmentor/blob/master/Augmentor/Operations.py # Check here for a better implementation of shear
+
+
+## Main 
+
+#Target size
+row_size = 200
+col_size = 200
+seed = 1
+image_directory = 
+labels_directory = 
+
+max_angle = 180
+incr_angle = (max_angle-0)/50
+angles = np.arange(0, max_angle, incr_angle)
+
+images = glob.glob(image_directory+"/*."+png)
+os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Augmented_train_images')
+
+labels = glob.glob(labels_directory+"/*."+png)
+os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Augmented_train_labels')
+
+for img in images:
+
+	base = os.path.basename(img)
+	newfilename = os.path.splitext(base)[0]
+
+	original_img = cv2.imread(img)
+	nrows, ncols, nchannels = img.shape
+
+	#Make a new directory to store all the augmented images
+	folder_path = os.path.join('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Augmented_train_images/', str(i)+'.jpg')
+	if not os.path.exists('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Augmented_train_images/'):
+		os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Augmented_train_images/')
+
+	#Rotation
+	print('Rotating Image')
+	iAngle = 0
+	for angle in angles:
+		rotated_image = rotate_max_area(original_img, angle)
+		resized_rotated_image = cv2.resize(rotated_image, (row_size, col_size), interpolation=cv2.INTER_NEAREST)
+		i+=1
+
+		fullnewfilename = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Resized Three Class Translated/"+newfilename +'_'+'rotated'+str(i)+ ".png"
+		cv2.imwrite(fullnewfilename, resized_rotated_image)
+
+
+# change folder names and filenames and paths
