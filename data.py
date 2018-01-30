@@ -138,7 +138,15 @@ class myAugmentation(object):
 
 class dataProcess(object):
 
-	def __init__(self, out_rows, out_cols, train_test_split, data_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Labelled Photos", label_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Three Class Labels", test_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Masked Photos Green/All Images", train_data_path = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Shuffled Data/Labelled Images Train and Val', test_data_path='/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Shuffled Data/Labelled Images Test', train_label_path ='/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Shuffled Data/Labels Train and Val', test_label_path ='/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Shuffled Data/Labels Test', npy_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata", img_type = "png"):
+	def __init__(self, out_rows, out_cols, train_test_split, data_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Augmented_train_images", 
+		label_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Augmented_train_labels", 
+		test_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Masked Photos Green/All Images", 
+		train_data_path = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Shuffled Data/Labelled Images Train and Val',
+		 test_data_path='/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Shuffled Data/Labelled Images Test', 
+		 train_label_path ='/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Shuffled Data/Labels Train and Val', 
+		 test_label_path ='/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Shuffled Data/Labels Test', 
+		 npy_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata", 
+		 img_type = "png"):
 
 		"""
 
@@ -193,6 +201,14 @@ class dataProcess(object):
 
 	# 	print(f_img)
 	# 	print(f_lab)
+
+	def create_train_val_test_data(self):
+		i = 0
+		print('-'*30)
+		print('Splitting images into train and test...')
+		print('-'*30)		
+
+		
 
 
 
