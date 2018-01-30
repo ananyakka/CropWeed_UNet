@@ -2,7 +2,14 @@
 
 
 import os 
+# The below is necessary in Python 3.2.3 onwards to
+# have reproducible behavior for certain hash-based operations.
+# See these references for further details:
+# https://docs.python.org/3.4/using/cmdline.html#envvar-PYTHONHASHSEED
+# https://github.com/keras-team/keras/issues/2280#issuecomment-306959926
+os.environ['PYTHONHASHSEED'] = '0'
 #os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 import numpy as np
 from keras.models import *
 from keras.layers import Input, merge, Conv2D, MaxPooling2D, UpSampling2D, Dropout, Cropping2D, Activation
@@ -14,6 +21,9 @@ from data import *
 from train_params import *
 from PIL import Image
 import cv2
+import tensorflow as tf
+import random as rn
+from sklearn.model_selection import StratifiedKFold, KFold
 
 class myUnet(object):
 
@@ -28,6 +38,29 @@ class myUnet(object):
 		imgs_train, imgs_mask_train = mydata.load_train_data()
 		imgs_test = mydata.load_test_data()
 		return imgs_train, imgs_mask_train, imgs_test
+		'''
+		npy_path = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data'
+		imgs_train = np.load(npy_path+"/imgs_train702010.npy")
+		imgs_train = imgs_train.astype('float32')
+		imgs_train /= 255
+		imgs_mask_train = np.load(npy_path+"/imgs_mask_train702010.npy")
+		imgs_mask_train = imgs_mask_train.astype('float32')
+
+		imgs_val = np.load(npy_path+"/imgs_val702010.npy")
+		imgs_val = imgs_val.astype('float32')
+		imgs_val /= 255
+		imgs_mask_val = np.load(npy_path+"/imgs_mask_val702010.npy")
+		imgs_mask_val = imgs_mask_val.astype('float32')
+
+		imgs_test = np.load(npy_path+"/imgs_test702010.npy")
+		imgs_test = imgs_test.astype('float32')
+		imgs_test /= 255
+		imgs_mask_test = np.load(npy_path+"/imgs_mask_test702010.npy")
+		imgs_mask_test = imgs_mask_test.astype('float32')
+
+
+		return imgs_train, imgs_mask_train, imgs_val, imgs_mask_val, imgs_test,imgs_mask_test
+		'''
 
 	def get_unet(self):
 
@@ -166,10 +199,10 @@ class myUnet(object):
 		model = Model(input = inputs, output =out)
 		model.summary()
 
-		# model.compile(optimizer = Adam(lr = 1e-4), loss = 'categorical_crossentropy', metrics = ['accuracy'])
+		model.compile(optimizer = Adam(lr = 1e-4), loss = 'categorical_crossentropy', metrics = ['accuracy'])
 		# model.compile(optimizer = Adam(lr = 1e-4), loss = jaccard_cross_entropy_loss, metrics = [ jaccard_coef])
 		# model.compile(optimizer = Adam(lr = 1e-4), loss = dice_cross_entropy_loss, metrics = [ dice_coef])
-		model.compile(optimizer = Adam(lr = 1e-4), loss = dice_cross_entropy_loss, metrics = [ dice_coef])
+		# model.compile(optimizer = Adam(lr = 1e-4), loss = dice_cross_entropy_loss, metrics = [ dice_coef])
 		
 
 		return model
@@ -178,6 +211,7 @@ class myUnet(object):
 	def train(self):
 
 		print("loading data")
+		# imgs_train, imgs_mask_train, imgs_val, imgs_mask_val, imgs_test,imgs_mask_test = self.load_data()
 		imgs_train, imgs_mask_train, imgs_test = self.load_data()
 
 		print(imgs_train.shape)
@@ -191,12 +225,61 @@ class myUnet(object):
 		model_checkpoint = ModelCheckpoint('unet.hdf5', monitor='val_loss',verbose=1, save_best_only=True)
 		print('Fitting model...')
 		early_stopping = EarlyStopping(monitor='val_loss', min_delta = 0, patience=5)
-		model.fit(imgs_train, imgs_mask_train, batch_size=4, nb_epoch=500, verbose=1,validation_split=0.2, shuffle=True, callbacks=[model_checkpoint, early_stopping])
+		model.fit(imgs_train, imgs_mask_train, batch_size=4, nb_epoch=500, verbose=1,validation_split=0.2, validation_data=(imgs_val, imgs_mask_val), shuffle=True, callbacks=[model_checkpoint, early_stopping])
 
 		print('predict test data')
 		imgs_mask_test = model.predict(imgs_test, batch_size=1, verbose=1)
 		print(imgs_mask_test.shape)
 		np.save('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/imgs_mask_test.npy', imgs_mask_test)
+
+		print('evaluate test data')
+		score = model.evaluate(x = imgs_test, y= imgs_mask_test)
+		print('Test loss:', score[0])
+		print('Test accuracy:', score[1])
+
+
+	def train_kfold(self):
+
+		print("loading data")
+		# imgs_train, imgs_mask_train, imgs_val, imgs_mask_val, imgs_test,imgs_mask_test = self.load_data()
+		imgs_train, imgs_mask_train, imgs_test = self.load_data()
+		# print(imgs_train.shape[0])
+
+		X = np.arange(0,imgs_train.shape[0] , 1)
+		# fix random seed for reproducibility
+		seed = 7
+		np.random.seed(seed)
+		# Source : https://machinelearningmastery.com/evaluate-performance-deep-learning-models-keras/
+		# define 10-fold cross validation test harness
+		n_splits=10
+		# kfold = StratifiedKFold(n_splits = n_splits, shuffle=True, random_state=seed)
+		kfold = KFold(n_splits = n_splits, shuffle=True, random_state=seed)
+		cvscores = []
+
+		print(imgs_train.shape)
+		print(imgs_mask_train.shape)
+		print(imgs_test.shape)
+		for train_index, test_index in kfold.split(X):
+			print("TRAIN:", train_index, "TEST:", test_index)
+
+		# for index, (train_indices, test_indices) in enumerate(kfold.split(imgs_train, imgs_mask_train)):
+			print("loading data done")
+			model = self.get_unet()
+			print("got unet")
+
+			model_checkpoint = ModelCheckpoint('unet.hdf5', monitor='val_loss',verbose=1, save_best_only=True)
+			print('Fitting model...')
+			early_stopping = EarlyStopping(monitor='val_loss', min_delta = 0, patience=5)
+			model.fit(imgs_train[train_index], imgs_mask_train[train_index], batch_size=4, nb_epoch=500, verbose=1,validation_split=0.2, shuffle=True, callbacks=[model_checkpoint, early_stopping])
+
+
+			print('evaluate test data')
+			score = model.evaluate(x = imgs_test[test_index], y= imgs_mask_test[test_index])
+			print('Test loss:', score[0])
+			print('Test accuracy:', score[1])
+			cvscores.append(score[1] * 100)
+		print('Mean score with std deviation over {0} folds'.format(n_splits))
+		print("%.2f%% (+/- %.2f%%)" % (numpy.mean(cvscores), numpy.std(cvscores)))
 
 	def save_img(self):
 
@@ -247,10 +330,40 @@ class myUnet(object):
 			# cv2.imwrite(filepath, img2)
 
 if __name__ == '__main__':
+	# The below is necessary for starting Numpy generated random numbers
+	# in a well-defined initial state.
+
+	np.random.seed(42)
+
+	# The below is necessary for starting core Python generated random numbers
+	# in a well-defined state.
+
+	rn.seed(12345)
+
+	# Force TensorFlow to use single thread.
+	# Multiple threads are a potential source of
+	# non-reproducible results.
+	# For further details, see: https://stackoverflow.com/questions/42022950/which-seeds-have-to-be-set-where-to-realize-100-reproducibility-of-training-res
+
+	session_conf = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
+
+	# The below tf.set_random_seed() will make random number generation
+	# in the TensorFlow backend have a well-defined initial state.
+	# For further details, see: https://www.tensorflow.org/api_docs/python/tf/set_random_seed
+
+	tf.set_random_seed(1234)
+
+	sess = tf.Session(graph=tf.get_default_graph(), config=session_conf)
+	keras.set_session(sess)
+
+
 	myunet = myUnet()
 	# model = myunet.get_unet()
-	myunet.train()
-	myunet.save_img()
+
+
+	# myunet.train() # comment for kfold cross-validation
+	myunet.train_kfold()# uncomment for kfold cross-validation
+	# myunet.save_img()# comment for kfold cross-validation
 
 
 

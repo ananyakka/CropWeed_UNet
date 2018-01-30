@@ -48,32 +48,32 @@ x_val_size2 = int(no_of_images*0.8)
 
 x_train, x_val, x_test = np.split(indices_shuffled, [x_train_size1, x_val_size1])
 
-i=0
-for index in x_train:
+# i=0
+# for index in x_train:
 	
-	image_folder = os.listdir(os.path.join(filepath, file_list[index]))
-	label_folder = os.listdir(os.path.join(labelpath, file_list[index]))
-	# print(len(image_folder))
-	imgdatas = np.ndarray((len(image_folder)*len(x_train), rows,cols,3), dtype=np.uint8)
-	imglabels = np.ndarray((len(label_folder)*len(x_train),rows,cols,3), dtype=np.uint8)
-	for (images, labels) in zip(image_folder, label_folder):
-		# print(images[images.rindex("/")+1:])
-		# midname = images[images.rindex("/")+1:]
-		img = load_img(os.path.join(filepath, file_list[index])+'/'+ images, grayscale = False)
-		label = load_img(os.path.join(filepath, file_list[index])+'/'+ labels, grayscale = False)
-		img = img_to_array(img)
-		label = img_to_array(label)		
-		# print(img.shape)
+# 	image_folder = os.listdir(os.path.join(filepath, file_list[index]))
+# 	label_folder = os.listdir(os.path.join(labelpath, file_list[index]))
+# 	# print(len(image_folder))
+# 	imgdatas = np.ndarray((len(image_folder)*len(x_train), rows,cols,3), dtype=np.uint8)
+# 	imglabels = np.ndarray((len(label_folder)*len(x_train),rows,cols,3), dtype=np.uint8)
+# 	for (images, labels) in zip(image_folder, label_folder):
+# 		# print(images[images.rindex("/")+1:])
+# 		# midname = images[images.rindex("/")+1:]
+# 		img = load_img(os.path.join(filepath, file_list[index])+'/'+ images, grayscale = False)
+# 		label = load_img(os.path.join(filepath, file_list[index])+'/'+ labels, grayscale = False)
+# 		img = img_to_array(img)
+# 		label = img_to_array(label)		
+# 		# print(img.shape)
 
-		imgdatas[i] = img
-		imglabels[i] = label
-		if i % 100 == 0:
-			print('Done: {0}/{1} images'.format(i, len(image_folder)*len(x_train)))
-		i += 1
-print('loading training data done')
-np.save('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data' + '/imgs_train702010.npy', imgdatas)
-np.save('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data' + '/imgs_mask_train702010.npy', imglabels)
-print('Saving to .npy files done.')
+# 		imgdatas[i] = img
+# 		imglabels[i] = label
+# 		if i % 100 == 0:
+# 			print('Done: {0}/{1} images'.format(i, len(image_folder)*len(x_train)))
+# 		i += 1
+# print('loading training data done')
+# np.save('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data' + '/imgs_train702010.npy', imgdatas)
+# np.save('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data' + '/imgs_mask_train702010.npy', imglabels)
+# print('Saving to .npy files done.')
 
 i = 0
 for index in x_val:
@@ -81,8 +81,8 @@ for index in x_val:
 	image_folder = os.listdir(os.path.join(filepath, file_list[index]))
 	label_folder = os.listdir(os.path.join(labelpath, file_list[index]))
 	# print(len(image_folder))
-	imgdatas = np.ndarray((len(image_folder)*len(x_train), rows,cols,3), dtype=np.uint8)
-	imglabels = np.ndarray((len(label_folder)*len(x_train),rows,cols,3), dtype=np.uint8)
+	imgdatas = np.ndarray((len(image_folder)*len(x_val), rows,cols,3), dtype=np.uint8)
+	imglabels = np.ndarray((len(label_folder)*len(x_val),rows,cols,3), dtype=np.uint8)
 	for (images, labels) in zip(image_folder, label_folder):
 		img = load_img(os.path.join(filepath, file_list[index])+'/'+ images, grayscale = False)
 		label = load_img(os.path.join(filepath, file_list[index])+'/'+ labels, grayscale = False)
@@ -94,7 +94,7 @@ for index in x_val:
 		imglabels[i] = label
 		# print(len(imgdatas))
 		if i % 100 == 0:
-			print('Done: {0}/{1} images'.format(i, len(image_folder)*len(x_train)))
+			print('Done: {0}/{1} images'.format(i, len(image_folder)*len(x_val)))
 		i += 1
 print('loading validation data done')
 
@@ -108,8 +108,8 @@ for index in x_test:
 	image_folder = os.listdir(os.path.join(filepath, file_list[index]))
 	label_folder = os.listdir(os.path.join(labelpath, file_list[index]))
 	# print(len(image_folder))
-	imgdatas = np.ndarray((len(image_folder)*len(x_train), rows,cols,3), dtype=np.uint8)
-	imglabels = np.ndarray((len(label_folder)*len(x_train),rows,cols,3), dtype=np.uint8)
+	imgdatas = np.ndarray((len(image_folder)*len(x_test), rows,cols,3), dtype=np.uint8)
+	imglabels = np.ndarray((len(label_folder)*len(x_test),rows,cols,3), dtype=np.uint8)
 	for (images, labels) in zip(image_folder, label_folder):
 		img = load_img(os.path.join(filepath, file_list[index])+'/'+ images, grayscale = False)
 		label = load_img(os.path.join(filepath, file_list[index])+'/'+ labels, grayscale = False)
@@ -120,7 +120,7 @@ for index in x_test:
 		imgdatas[i] = img
 		imglabels[i] = label
 		if i % 100 == 0:
-			print('Done: {0}/{1} images'.format(i, len(image_folder)*len(x_train)))
+			print('Done: {0}/{1} images'.format(i, len(image_folder)*len(x_test)))
 		i += 1
 print('loading testing data done')
 np.save('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data' + '/imgs_test702010.npy', imgdatas)
