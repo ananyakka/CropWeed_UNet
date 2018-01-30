@@ -490,8 +490,8 @@ for img in labels:
 	#Create border within which the image is to be shifted. This new image taken by excluding the border is smaller than the original image. 
 	# This lets us shift the image without adding false pixels to fill up the shifted space
 	# p.s.: Making it propotional to the respective dimensions
-	border_height = int(height/100)
-	border_width = int(width/100)
+	border_height = int(height/10)
+	border_width = int(width/10)
 
 	# Set the shifting increments
 	shift_width = np.arange(0, border_width, int(border_width/10))
