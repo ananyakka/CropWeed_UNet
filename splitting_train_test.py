@@ -80,7 +80,8 @@ for index in x_val:
 	
 	image_folder = os.listdir(os.path.join(filepath, file_list[index]))
 	label_folder = os.listdir(os.path.join(labelpath, file_list[index]))
-	# print(len(image_folder))
+	print(len(image_folder))
+	print(image_folder[3])
 	imgdatas = np.ndarray((len(image_folder)*len(x_val), rows,cols,3), dtype=np.uint8)
 	imglabels = np.ndarray((len(label_folder)*len(x_val),rows,cols,3), dtype=np.uint8)
 	for (images, labels) in zip(image_folder, label_folder):
@@ -98,9 +99,9 @@ for index in x_val:
 		i += 1
 print('loading validation data done')
 
-np.save('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data' + '/imgs_val702010.npy', imgdatas)
-np.save('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data' + '/imgs_mask_val702010.npy', imglabels)
-print('Saving to .npy files done.')
+# np.save('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data' + '/imgs_val702010.npy', imgdatas)
+# np.save('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data' + '/imgs_mask_val702010.npy', imglabels)
+# print('Saving to .npy files done.')
 
 i=0
 for index in x_test:
