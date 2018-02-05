@@ -18,11 +18,6 @@ import random
 from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
 
 
-# glob_file_key = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Augmented_train_images/*"
-# for f in enumerate(glob(glob_file_key)):
-
-# 	# no_of_images = 
-# 	print(f)
 
 filepath = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Augmented_train_images/'
 

@@ -147,15 +147,12 @@ class dataProcess(object):
 	# 	 test_label_path ='/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Shuffled Data/Labels Test', 
 	# 	 npy_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata", 
 	# 	 img_type = "png"):
-	def __init__(self, out_rows, out_cols, train_test_split, data_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Augmented_train_images", 
-		label_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Augmented_train_labels", 
-		test_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Masked Photos Green/All Images", 
-		train_data_path = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Shuffled Data/Labelled Images Train and Val',
-		 test_data_path='/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Shuffled Data/Labelled Images Test', 
-		 train_label_path ='/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Shuffled Data/Labels Train and Val', 
-		 test_label_path ='/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Shuffled Data/Labels Test', 
-		 npy_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata", 
-		 img_type = "png"):
+	def __init__(self, out_rows, out_cols, train_test_split, data_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/Training Set/Training original", 
+		label_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/Training Set/Training ground truth", 
+		test_data_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/Test Set/images", 
+		test_label_path ='/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/Test Set/Testing ground truth', 
+		npy_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata", 
+		img_type = "png"):
 		"""
 
 		test_path = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Test Data"
@@ -166,10 +163,7 @@ class dataProcess(object):
 		self.data_path = data_path
 		self.label_path = label_path
 		self.img_type = img_type
-		self.test_path = test_path
-		self.train_data_path = train_data_path
 		self.test_data_path = test_data_path
-		self.train_label_path = train_label_path
 		self.test_label_path = test_label_path
 		self.npy_path = npy_path
 
@@ -210,15 +204,6 @@ class dataProcess(object):
 	# 	print(f_img)
 	# 	print(f_lab)
 
-	def create_train_val_test_data(self):
-		i = 0
-		print('-'*30)
-		print('Splitting images into train and test...')
-		print('-'*30)		
-
-		
-
-
 
 
 	def create_train_data(self):
@@ -226,14 +211,85 @@ class dataProcess(object):
 		print('-'*30)
 		print('Creating training images...')
 		print('-'*30)
-		imgs = glob.glob(self.data_path+"/*."+self.img_type)
+		imgs = glob.glob(self.data_path+"/*.JPG")
 		print(len(imgs))
 		imgdatas = np.ndarray((len(imgs),self.out_rows,self.out_cols,3), dtype=np.uint8)
 		imglabels = np.ndarray((len(imgs),self.out_rows,self.out_cols,3), dtype=np.uint8)
 		for imgname in imgs:
-			midname = imgname[imgname.rindex("/")+1:]
-			img = load_img(self.data_path + "/" + midname, grayscale = False, target_size=(self.out_rows,self.out_cols),interpolation='nearest')
-			label = load_img(self.label_path + "/" + midname, grayscale = False, target_size=(self.out_rows,self.out_cols),interpolation='nearest')
+			midname = imgname[imgname.rindex("/")+1:imgname.rindex(".")]
+			# print(midname)
+			img = load_img(self.data_path + "/" + midname+".JPG", grayscale = False, target_size=(self.out_rows,self.out_cols),interpolation='nearest')
+			label = load_img(self.label_path + "/" + midname+".png", grayscale = False, target_size=(self.out_rows,self.out_cols),interpolation='nearest')
+			img = img_to_array(img)
+			label = img_to_array(label)
+			#img = cv2.imread(self.data_path + "/" + midname,cv2.IMREAD_GRAYSCALE)
+			#label = cv2.imread(self.label_path + "/" + midname,cv2.IMREAD_GRAYSCALE)
+			#img = np.array([img])
+			#label = np.array([label])
+			print(img.shape)
+	
+			imgdatas[i] = img
+			# print(imgdatas.shape)
+			imglabels[i] = label
+			# print(imglabels.shape)
+			if i % 100 == 0:
+				print('Done: {0}/{1} images'.format(i, len(imgs)))
+			i += 1
+		print('loading done')
+		np.save(self.npy_path + '/imgs_train.npy', imgdatas)
+		np.save(self.npy_path + '/imgs_mask_train.npy', imglabels)
+		print('Saving to .npy files done.')
+
+	def create_test_data(self):
+
+		# For predicting on all the unlabelled images
+		# i = 0
+		# print('-'*30)
+		# print('Creating test images...')
+		# print('-'*30)
+		# imgs = glob.glob(self.test_path+"/*.JPG")
+		# imgs2 = glob.glob(self.test_path+"/*.jpg")
+		# print(len(imgs))
+		# imgdatas = np.ndarray(((len(imgs)+len(imgs2)),self.out_rows,self.out_cols,3), dtype=np.uint8)
+		# for imgname in imgs:
+		# 	midname = imgname[imgname.rindex("/")+1:]
+		# 	img = load_img(self.test_path + "/" + midname,grayscale = False, target_size=(self.out_rows,self.out_cols),interpolation='nearest')
+		# 	img = img_to_array(img)
+		# 	#img = cv2.imread(self.test_path + "/" + midname,cv2.IMREAD_GRAYSCALE)
+		# 	#img = np.array([img])
+		# 	imgdatas[i] = img
+		# 	i += 1
+		# print('loading JPG done')
+
+		
+		# print(len(imgs2))
+		# for imgname in imgs2:
+		# 	midname = imgname[imgname.rindex("/")+1:]
+		# 	img = load_img(self.test_path + "/" + midname,grayscale = False, target_size=(self.out_rows,self.out_cols),interpolation='nearest')
+		# 	img = img_to_array(img)
+		# 	#img = cv2.imread(self.test_path + "/" + midname,cv2.IMREAD_GRAYSCALE)
+		# 	#img = np.array([img])
+		# 	imgdatas[i] = img
+		# 	i += 1
+		# print('loading jpg done')
+
+		# np.save(self.npy_path + '/imgs_test.npy', imgdatas)
+		# print('Saving to imgs_test.npy files done.')
+
+
+		#For comparison data
+		i = 0
+		print('-'*30)
+		print('Creating training images...')
+		print('-'*30)
+		imgs = glob.glob(self.test_data_path+"/*.JPG")
+		print(len(imgs))
+		imgdatas = np.ndarray((len(imgs),self.out_rows,self.out_cols,3), dtype=np.uint8)
+		imglabels = np.ndarray((len(imgs),self.out_rows,self.out_cols,3), dtype=np.uint8)
+		for imgname in imgs:
+			midname = imgname[imgname.rindex("/")+1:imgname.rindex(".")]
+			img = load_img(self.test_data_path + "/" + midname+".JPG", grayscale = False, target_size=(self.out_rows,self.out_cols),interpolation='nearest')
+			label = load_img(self.test_label_path + "/" + midname+".png", grayscale = False, target_size=(self.out_rows,self.out_cols),interpolation='nearest')
 			img = img_to_array(img)
 			label = img_to_array(label)
 			#img = cv2.imread(self.data_path + "/" + midname,cv2.IMREAD_GRAYSCALE)
@@ -248,43 +304,11 @@ class dataProcess(object):
 				print('Done: {0}/{1} images'.format(i, len(imgs)))
 			i += 1
 		print('loading done')
-		np.save(self.npy_path + '/imgs_train.npy', imgdatas)
-		np.save(self.npy_path + '/imgs_mask_train.npy', imglabels)
+		np.save(self.npy_path + '/imgs_test.npy', imgdatas)
+		np.save(self.npy_path + '/imgs_mask_test.npy', imglabels)
 		print('Saving to .npy files done.')
 
-	def create_test_data(self):
-		i = 0
-		print('-'*30)
-		print('Creating test images...')
-		print('-'*30)
-		imgs = glob.glob(self.test_path+"/*.JPG")
-		imgs2 = glob.glob(self.test_path+"/*.jpg")
-		print(len(imgs))
-		imgdatas = np.ndarray(((len(imgs)+len(imgs2)),self.out_rows,self.out_cols,3), dtype=np.uint8)
-		for imgname in imgs:
-			midname = imgname[imgname.rindex("/")+1:]
-			img = load_img(self.test_path + "/" + midname,grayscale = False, target_size=(self.out_rows,self.out_cols),interpolation='nearest')
-			img = img_to_array(img)
-			#img = cv2.imread(self.test_path + "/" + midname,cv2.IMREAD_GRAYSCALE)
-			#img = np.array([img])
-			imgdatas[i] = img
-			i += 1
-		print('loading JPG done')
 
-		
-		print(len(imgs2))
-		for imgname in imgs2:
-			midname = imgname[imgname.rindex("/")+1:]
-			img = load_img(self.test_path + "/" + midname,grayscale = False, target_size=(self.out_rows,self.out_cols),interpolation='nearest')
-			img = img_to_array(img)
-			#img = cv2.imread(self.test_path + "/" + midname,cv2.IMREAD_GRAYSCALE)
-			#img = np.array([img])
-			imgdatas[i] = img
-			i += 1
-		print('loading jpg done')
-
-		np.save(self.npy_path + '/imgs_test.npy', imgdatas)
-		print('Saving to imgs_test.npy files done.')
 
 	def load_train_data(self):
 		print('-'*30)
@@ -309,9 +333,12 @@ class dataProcess(object):
 		imgs_test = np.load(self.npy_path+"/imgs_test.npy")
 		imgs_test = imgs_test.astype('float32')
 		imgs_test /= 255
+		imgs_mask_test = np.load(self.npy_path+"/imgs_mask_test.npy")
+		imgs_mask_test = imgs_mask_test.astype('float32')
+		imgs_mask_test /= 255
 		#mean = imgs_test.mean(axis = 0)
 		#imgs_test -= mean	
-		return imgs_test
+		return imgs_test, imgs_mask_test
 
 if __name__ == "__main__":
 
