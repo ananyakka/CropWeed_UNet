@@ -15,7 +15,7 @@ from keras.models import *
 from keras.layers import Input, merge, Conv2D, MaxPooling2D, UpSampling2D, Dropout, Cropping2D, Activation
 from keras.activations import softmax
 from keras.optimizers import *
-from keras.callbacks import ModelCheckpoint, LearningRateScheduler, EarlyStopping
+from keras.callbacks import ModelCheckpoint, LearningRateScheduler, EarlyStopping,ReduceLROnPlateau
 from keras import backend as keras
 from data import *
 from train_params import *
@@ -24,6 +24,7 @@ import cv2
 import tensorflow as tf
 import random as rn
 from sklearn.model_selection import StratifiedKFold, KFold
+# import keras.backend.tensorflow_backend
 
 from data_generator import my_generator #my_generator(filepath, labelpath, x_set_indices, batch_size)
 
@@ -38,9 +39,10 @@ class myUnet(object):
 
 		mydata = dataProcess(self.img_rows, self.img_cols, 0.8)
 		imgs_train, imgs_mask_train = mydata.load_train_data()
-		imgs_test = mydata.load_test_data()
-		return imgs_train, imgs_mask_train, imgs_test
+		imgs_test, imgs_mask_test = mydata.load_test_data()
+		return imgs_train, imgs_mask_train, imgs_test, imgs_mask_test
 		'''
+		#can't run because data doesn't fit in memory
 		npy_path = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data'
 		imgs_train = np.load(npy_path+"/imgs_train702010.npy")
 		imgs_train = imgs_train.astype('float32')
@@ -153,33 +155,33 @@ class myUnet(object):
 
 		print("loading data")
 		# imgs_train, imgs_mask_train, imgs_val, imgs_mask_val, imgs_test,imgs_mask_test = self.load_data()
-		imgs_train, imgs_mask_train, imgs_test = self.load_data()
+		imgs_train, imgs_mask_train, imgs_test, imgs_mask_test = self.load_data()
 
-		# The below is necessary for starting Numpy generated random numbers
-		# in a well-defined initial state.
+		# # The below is necessary for starting Numpy generated random numbers
+		# # in a well-defined initial state.
 
-		np.random.seed(42)
+		# np.random.seed(42)
 
-		# The below is necessary for starting core Python generated random numbers
-		# in a well-defined state.
+		# # The below is necessary for starting core Python generated random numbers
+		# # in a well-defined state.
 
-		rn.seed(12345)
+		# rn.seed(12345)
 
-		# Force TensorFlow to use single thread.
-		# Multiple threads are a potential source of
-		# non-reproducible results.
-		# For further details, see: https://stackoverflow.com/questions/42022950/which-seeds-have-to-be-set-where-to-realize-100-reproducibility-of-training-res
+		# # Force TensorFlow to use single thread.
+		# # Multiple threads are a potential source of
+		# # non-reproducible results.
+		# # For further details, see: https://stackoverflow.com/questions/42022950/which-seeds-have-to-be-set-where-to-realize-100-reproducibility-of-training-res
 
-		session_conf = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
+		# session_conf = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
 
-		# The below tf.set_random_seed() will make random number generation
-		# in the TensorFlow backend have a well-defined initial state.
-		# For further details, see: https://www.tensorflow.org/api_docs/python/tf/set_random_seed
+		# # The below tf.set_random_seed() will make random number generation
+		# # in the TensorFlow backend have a well-defined initial state.
+		# # For further details, see: https://www.tensorflow.org/api_docs/python/tf/set_random_seed
 
-		tf.set_random_seed(1234)
+		# tf.set_random_seed(1234)
 
-		sess = tf.Session(graph=tf.get_default_graph(), config=session_conf)
-		keras.set_session(sess)
+		# sess = tf.Session(graph=tf.get_default_graph(), config=session_conf)
+		# keras.set_session(sess)
 
 		print(imgs_train.shape)
 		print(imgs_mask_train.shape)
@@ -192,12 +194,15 @@ class myUnet(object):
 		model_checkpoint = ModelCheckpoint('unet.hdf5', monitor='val_loss',verbose=1, save_best_only=True)
 		print('Fitting model...')
 		early_stopping = EarlyStopping(monitor='val_loss', min_delta = 0, patience=5)
-		model.fit(imgs_train, imgs_mask_train, batch_size=4, nb_epoch=500, verbose=1,validation_split=0.2, validation_data=(imgs_val, imgs_mask_val), shuffle=True, callbacks=[model_checkpoint, early_stopping])
+		adjust_learning_rate = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, verbose=0, mode='auto', epsilon=0.0001, cooldown=0, min_lr=0)
+		model.fit(imgs_train, imgs_mask_train, batch_size=4, nb_epoch=500, verbose=1,validation_split=0.2, shuffle=True, callbacks=[model_checkpoint, early_stopping, adjust_learning_rate])
 
 		print('predict test data')
-		imgs_mask_test = model.predict(imgs_test, batch_size=1, verbose=1)
-		print(imgs_mask_test.shape)
-		np.save('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/imgs_mask_test.npy', imgs_mask_test)
+		imgs_predicted_mask_test = model.predict(imgs_test, batch_size=1, verbose=1)
+		# print(imgs_predicted_mask_test.shape)
+
+		print(imgs_predicted_mask_test.shape)
+		np.save('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/imgs_predicted_mask_test.npy', imgs_predicted_mask_test)
 
 		print('evaluate test data')
 		score = model.evaluate(x = imgs_test, y= imgs_mask_test)
@@ -262,7 +267,8 @@ class myUnet(object):
 			model_checkpoint = ModelCheckpoint('unet.hdf5', monitor='val_loss',verbose=1, save_best_only=True)
 			print('Fitting model...')
 			early_stopping = EarlyStopping(monitor='val_loss', min_delta = 0.0001, patience=5)
-			model.fit(imgs_train[train_index], imgs_mask_train[train_index], batch_size=4, nb_epoch=500, verbose=1,validation_split=0.2, shuffle=True, callbacks=[model_checkpoint, early_stopping])
+			adjust_learning_rate = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, verbose=0, mode='auto', epsilon=0.0001, cooldown=0, min_lr=0)
+			model.fit(imgs_train[train_index], imgs_mask_train[train_index], batch_size=4, nb_epoch=500, verbose=1,validation_split=0.2, shuffle=True, callbacks=[model_checkpoint, early_stopping, adjust_learning_rate])
 
 
 			print('evaluate test data')
@@ -275,34 +281,8 @@ class myUnet(object):
 
 	def train_batch(self):
 
-		# The below is necessary for starting Numpy generated random numbers
-		# in a well-defined initial state.
-
-		np.random.seed(42)
-
-		# The below is necessary for starting core Python generated random numbers
-		# in a well-defined state.
-
-		rn.seed(12345)
-
-		# Force TensorFlow to use single thread.
-		# Multiple threads are a potential source of
-		# non-reproducible results.
-		# For further details, see: https://stackoverflow.com/questions/42022950/which-seeds-have-to-be-set-where-to-realize-100-reproducibility-of-training-res
-
-		session_conf = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
-
-		# The below tf.set_random_seed() will make random number generation
-		# in the TensorFlow backend have a well-defined initial state.
-		# For further details, see: https://www.tensorflow.org/api_docs/python/tf/set_random_seed
-
-		tf.set_random_seed(1234)
-
-		sess = tf.Session(graph=tf.get_default_graph(), config=session_conf)
-		keras.set_session(sess)
-	
-		filepath = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Augmented_train_images/'
-		labelpath = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Augmented_train_labels/'
+		filepath = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Train_image_Patches/'
+		labelpath = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Train_label_patches/'
 
 		batch_size = 32
 
@@ -322,6 +302,10 @@ class myUnet(object):
 
 
 		x_train, x_val, x_test = np.split(indices_shuffled, [x_train_size1, x_val_size1])
+		print(x_train)
+		print(x_val)
+		print(x_test)
+		print(x_test.shape)
 
 		# Generators
 		training_generator = my_generator(filepath, labelpath, x_train, batch_size)
@@ -329,38 +313,60 @@ class myUnet(object):
 		test_generator = my_generator(filepath, labelpath, x_test, 1)
 		
 		model = self.get_unet()
+		# model = load_model('unet.hdf5') # load a trained model of unet
 		print("got unet")
 
 		model_checkpoint = ModelCheckpoint('unet.hdf5', monitor='val_loss',verbose=1, save_best_only=True)
 		print('Fitting model...')
 		early_stopping = EarlyStopping(monitor='val_loss', min_delta = 0.0001, patience=5)
-		model.fit_generator(training_generator, epochs=500, steps_per_epoch=2000, verbose=1, callbacks=[model_checkpoint, early_stopping], validation_data = validation_generator, validation_steps = 610 )
-		#steps are found by dividing total images by batch size; (68080/32 ~= 2127), (19536/32 ~= 610)
+		adjust_learning_rate = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, verbose=0, mode='auto', epsilon=0.0001, cooldown=0, min_lr=0)
+		model.fit_generator(training_generator, epochs=500, steps_per_epoch=2000, verbose=1, callbacks=[model_checkpoint, early_stopping, adjust_learning_rate], validation_data = validation_generator, validation_steps = 610 )
+		# steps are found by dividing total images by batch size; (68080/32 ~= 2127), (19536/32 ~= 610)
 
 		print('predict test data')
-		imgs_mask_test = model.predict_generator(test_generator, steps=305, max_queue_size=10, workers=1, verbose=1)
-		#steps: (9768/32 ~=305)
+		# imgs_predicted_mask_test = model.predict_generator(test_generator, steps=9768, max_queue_size=10, workers=1, verbose=1)
+		# #steps: (9768/32 ~=305)
 
-		print(imgs_mask_test.shape)
-		np.save('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/imgs_predicted_mask_test702010.npy', imgs_mask_test)
+		# print(imgs_predicted_mask_test.shape)
+		# np.save('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/imgs_predicted_mask_test702010.npy', imgs_predicted_mask_test)
+
+		predict_and_save(model,filepath, labelpath, x_test, save = True)
+
 
 		print('evaluate test data')
-		score = model.evaluate_generator(test_generator, steps=305, max_queue_size=10, workers=1)
+		score = model.evaluate_generator(test_generator, steps=9768, max_queue_size=10, workers=1)
 		print('Test loss:', score[0])
 		print('Test accuracy:', score[1])
 
 	def save_img(self):
 
 		print("array to image")
+		#Path to read test images and predicted labels from
 		imgs_mask = np.load('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/imgs_predicted_mask_test702010.npy')
-		imgs_test = np.load('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/imgs_test702010.npy')
+		# imgs_test = np.load('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/imgs_test702010.npy')
 
+		# Folders to save test images, predicted labels and their overlay
 		if not os.path.exists('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/results'):
 			os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/results')
 		if not os.path.exists('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/results_test_images'):
 			os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/results_test_images')			
 		if not os.path.exists('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/results_combined'):
-			os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/results_combined')
+			os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/results_combined')		
+
+
+		# #Path to read test images and predicted labels from
+		# imgs_mask = np.load('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/imgs_predicted_mask_test.npy')
+		# print(imgs_mask.shape)
+		# imgs_test = np.load('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/imgs_test.npy')
+		# print(imgs_test.shape)
+
+		# # Folders to save test images, predicted labels and their overlay
+		# if not os.path.exists('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/results'):
+		# 	os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/results')
+		# if not os.path.exists('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/results_test_images'):
+		# 	os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/results_test_images')			
+		# if not os.path.exists('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/results_combined'):
+		# 	os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/results_combined')	
 
 
 		for i in range(imgs_mask.shape[0]):
@@ -376,7 +382,7 @@ class myUnet(object):
 			# add translucent label(img1) to original image(img2)
 			filepath1 = os.path.join("/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/results/", str(i)+'.jpg')
 			img1 = cv2.imread(filepath1)
-			img4 = img1[:,:,1]
+			# img4 = img1[:,:,1]
 
 			filepath2 = os.path.join("/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/results_test_images/", str(i)+'.jpg')
 			img2 = cv2.imread(filepath2)
@@ -397,32 +403,110 @@ class myUnet(object):
 			# img2 = array_to_img(img2)
 			# cv2.imwrite(filepath, img2)
 
+def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
+
+	rows =200
+	cols = 200
+	file_list = list(os.listdir(filepath))
+	label_list = list(os.listdir(labelpath))
+	batch_size = 1
+
+	# Folders to save test images, predicted labels and their overlay
+	npy_path = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Patched Data/'
+	if not os.path.exists(os.path.join(npy_path, 'results')):
+		os.makedirs(os.path.join(npy_path, 'results'))
+	if not os.path.exists(os.path.join(npy_path, 'results_test_images')):
+		os.makedirs(os.path.join(npy_path, 'results_test_images'))			
+	if not os.path.exists(os.path.join(npy_path, 'results_combined')):
+		os.makedirs(os.path.join(npy_path, 'results_combined'))
+
+	for index in x_set_indices:
+
+		image_folder = os.listdir(os.path.join(filepath, file_list[index]))
+		label_folder = os.listdir(os.path.join(labelpath, label_list[index]))
+		# print(len(image_folder))
+		nBatch_in_folder = int(len(image_folder)/batch_size)
+
+		batch_start = 0
+		batch_end = batch_size
+		folder_total = len(image_folder)
+
+		while batch_start< folder_total:
+
+			limit = min(batch_end, folder_total)
+			list_images = range(batch_start,batch_end)
+
+			i=0
+
+			for iImage in list_images:
+
+				# test_img = load_img(os.path.join(filepath, file_list[index])+'/'+ image_folder[iImage], grayscale = False)
+				filepath1 = os.path.join(filepath, file_list[index]+'/'+ image_folder[iImage])
+				test_img = cv2.imread(filepath1)
+				test_img_exp=np.expand_dims(test_img, axis=0)
+
+				filepath2 = os.path.join(npy_path, 'results_test_images/'+file_list[index]+ '/'+image_folder[iImage])
+				# print(file_list[index])
+				# print(filepath2)
+				cv2.imwrite(filepath2, test_img)
+
+				predicted_label = model.predict(test_img_exp)
+				# print(predicted_label[0].shape)
+				# predicted_label = array_to_img(predicted_label)
+				predicted_label = array_to_img(predicted_label[0])
+				path = os.path.join(npy_path, 'results/'+file_list[index]+'/'+image_folder[iImage])
+				predicted_label.save(path)
+				# predicted_label.save(path, 'jpg')
+				# cv2.imwrite(path, predicted_label[0])
+
+				predicted_image = cv2.imread(path)
+
+
+				# print(type(predicted_image))
+				# print(predicted_image.shape)
+				# print(type(test_img))
+				# print(test_img.shape)
+
+
+				combined_image = cv2.addWeighted(predicted_image, 0.4, test_img, 0.6, 0)
+
+				filepath3 = os.path.join(npy_path, 'results_combined/'+file_list[index]+'/'+ image_folder[iImage])
+				cv2.imwrite(filepath3, combined_image)
+
+				i+=1
+				batch_start += batch_size
+				batch_end += batch_size
+
+
 if __name__ == '__main__':
-	# # The below is necessary for starting Numpy generated random numbers
-	# # in a well-defined initial state.
 
-	# np.random.seed(42)
+	if keras.backend() == 'tensorflow':
+		keras.clear_session()
+	# The below is necessary for starting Numpy generated random numbers
+	# in a well-defined initial state.
 
-	# # The below is necessary for starting core Python generated random numbers
-	# # in a well-defined state.
+	np.random.seed(42)
 
-	# rn.seed(12345)
+	# The below is necessary for starting core Python generated random numbers
+	# in a well-defined state.
 
-	# # Force TensorFlow to use single thread.
-	# # Multiple threads are a potential source of
-	# # non-reproducible results.
-	# # For further details, see: https://stackoverflow.com/questions/42022950/which-seeds-have-to-be-set-where-to-realize-100-reproducibility-of-training-res
+	rn.seed(12345)
 
-	# session_conf = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
+	# Force TensorFlow to use single thread.
+	# Multiple threads are a potential source of
+	# non-reproducible results.
+	# For further details, see: https://stackoverflow.com/questions/42022950/which-seeds-have-to-be-set-where-to-realize-100-reproducibility-of-training-res
 
-	# # The below tf.set_random_seed() will make random number generation
-	# # in the TensorFlow backend have a well-defined initial state.
-	# # For further details, see: https://www.tensorflow.org/api_docs/python/tf/set_random_seed
+	session_conf = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
 
-	# tf.set_random_seed(1234)
+	# The below tf.set_random_seed() will make random number generation
+	# in the TensorFlow backend have a well-defined initial state.
+	# For further details, see: https://www.tensorflow.org/api_docs/python/tf/set_random_seed
 
-	# sess = tf.Session(graph=tf.get_default_graph(), config=session_conf)
-	# keras.set_session(sess)
+	tf.set_random_seed(1234)
+
+	sess = tf.Session(graph=tf.get_default_graph(), config=session_conf)
+	keras.set_session(sess)
 
 
 	myunet = myUnet()
@@ -432,7 +516,7 @@ if __name__ == '__main__':
 	# myunet.train() # comment for kfold cross-validation
 	# myunet.train_kfold()# uncomment for kfold cross-validation
 	myunet.train_batch()
-	myunet.save_img()# comment for kfold cross-validation
+	# myunet.save_img()# comment for kfold cross-validation
 
 
 
