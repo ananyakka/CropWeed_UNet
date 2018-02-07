@@ -278,7 +278,7 @@ class dataProcess(object):
 
 
 		#For comparison data
-		i = 0
+		iImage = 0
 		print('-'*30)
 		print('Creating training images...')
 		print('-'*30)
@@ -286,23 +286,33 @@ class dataProcess(object):
 		print(len(imgs))
 		imgdatas = np.ndarray((len(imgs),self.out_rows,self.out_cols,3), dtype=np.uint8)
 		imglabels = np.ndarray((len(imgs),self.out_rows,self.out_cols,3), dtype=np.uint8)
+		red = np.array([1, 0, 0])
+		blue = np.array([0, 0, 1])
 		for imgname in imgs:
 			midname = imgname[imgname.rindex("/")+1:imgname.rindex(".")]
 			img = load_img(self.test_data_path + "/" + midname+".JPG", grayscale = False, target_size=(self.out_rows,self.out_cols),interpolation='nearest')
 			label = load_img(self.test_label_path + "/" + midname+".png", grayscale = False, target_size=(self.out_rows,self.out_cols),interpolation='nearest')
 			img = img_to_array(img)
-			label = img_to_array(label)
-			#img = cv2.imread(self.data_path + "/" + midname,cv2.IMREAD_GRAYSCALE)
-			#label = cv2.imread(self.label_path + "/" + midname,cv2.IMREAD_GRAYSCALE)
-			#img = np.array([img])
-			#label = np.array([label])
+			# label = img_to_array(label)
+			label = np.array(label)
+
+			for i in range(label.shape[0]):
+				for j in range(label.shape[1]):
+					pixel = label[i,j]
+					if (pixel.argmax(axis=-1) == red.argmax(axis=-1)) or (pixel.argmax(axis=-1) == blue.argmax(axis=-1)):
+						print('yes, i have red or blue pixels')
+
+			# img = cv2.imread(self.data_path + "/" + midname,cv2.IMREAD_GRAYSCALE)
+			# label = cv2.imread(self.label_path + "/" + midname,cv2.IMREAD_GRAYSCALE)
+			# img = np.array([img])
+			# label = np.array([label])
 			print(img.shape)
 	
-			imgdatas[i] = img
-			imglabels[i] = label
-			if i % 100 == 0:
-				print('Done: {0}/{1} images'.format(i, len(imgs)))
-			i += 1
+			imgdatas[iImage] = img
+			imglabels[iImage] = label
+			if iImage % 100 == 0:
+				print('Done: {0}/{1} images'.format(iImage, len(imgs)))
+			iImage += 1
 		print('loading done')
 		np.save(self.npy_path + '/imgs_test.npy', imgdatas)
 		np.save(self.npy_path + '/imgs_mask_test.npy', imglabels)
@@ -348,7 +358,7 @@ if __name__ == "__main__":
 	#aug.splitTransform()
 	mydata = dataProcess(200,200, 0.8)
 	# mydata.move_images_train_test()
-	mydata.create_train_data()
+	# mydata.create_train_data()
 	mydata.create_test_data()
 	#imgs_train,imgs_mask_train = mydata.load_train_data()
 #print imgs_train.shape,imgs_mask_train.shape

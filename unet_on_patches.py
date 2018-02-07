@@ -284,6 +284,9 @@ class myUnet(object):
 		filepath = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Train_image_Patches/'
 		labelpath = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Train_label_patches/'
 
+		# filepath = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Augmented_train_images/'
+		# labelpath = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Augmented_train_labels/'
+
 		batch_size = 32
 
 		#Make a list of all files
@@ -312,16 +315,16 @@ class myUnet(object):
 		validation_generator = my_generator(filepath, labelpath, x_val, batch_size)
 		test_generator = my_generator(filepath, labelpath, x_test, 1)
 		
-		model = self.get_unet()
-		# model = load_model('unet.hdf5') # load a trained model of unet
+		# model = self.get_unet()
+		model = load_model('unet.hdf5') # load a trained model of unet
 		print("got unet")
 
-		model_checkpoint = ModelCheckpoint('unet.hdf5', monitor='val_loss',verbose=1, save_best_only=True)
-		print('Fitting model...')
-		early_stopping = EarlyStopping(monitor='val_loss', min_delta = 0.0001, patience=5)
-		adjust_learning_rate = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, verbose=0, mode='auto', epsilon=0.0001, cooldown=0, min_lr=0)
-		model.fit_generator(training_generator, epochs=500, steps_per_epoch=2000, verbose=1, callbacks=[model_checkpoint, early_stopping, adjust_learning_rate], validation_data = validation_generator, validation_steps = 610 )
-		# steps are found by dividing total images by batch size; (68080/32 ~= 2127), (19536/32 ~= 610)
+		# model_checkpoint = ModelCheckpoint('unet.hdf5', monitor='val_loss',verbose=1, save_best_only=True)
+		# print('Fitting model...')
+		# early_stopping = EarlyStopping(monitor='val_loss', min_delta = 0.0001, patience=5)
+		# adjust_learning_rate = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, verbose=0, mode='auto', epsilon=0.0001, cooldown=0, min_lr=0)
+		# model.fit_generator(training_generator, epochs=500, steps_per_epoch=2000, verbose=1, callbacks=[model_checkpoint, early_stopping, adjust_learning_rate], validation_data = validation_generator, validation_steps = 610 )
+		# # steps are found by dividing total images by batch size; (68080/32 ~= 2127), (19536/32 ~= 610)
 
 		print('predict test data')
 		# imgs_predicted_mask_test = model.predict_generator(test_generator, steps=9768, max_queue_size=10, workers=1, verbose=1)
@@ -333,10 +336,10 @@ class myUnet(object):
 		predict_and_save(model,filepath, labelpath, x_test, save = True)
 
 
-		print('evaluate test data')
-		score = model.evaluate_generator(test_generator, steps=9768, max_queue_size=10, workers=1)
-		print('Test loss:', score[0])
-		print('Test accuracy:', score[1])
+		# print('evaluate test data')
+		# score = model.evaluate_generator(test_generator, steps=9768, max_queue_size=10, workers=1)
+		# print('Test loss:', score[0])
+		# print('Test accuracy:', score[1])
 
 	def save_img(self):
 
@@ -413,12 +416,16 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 
 	# Folders to save test images, predicted labels and their overlay
 	npy_path = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Patched Data/'
-	if not os.path.exists(os.path.join(npy_path, 'results')):
-		os.makedirs(os.path.join(npy_path, 'results'))
-	if not os.path.exists(os.path.join(npy_path, 'results_test_images')):
-		os.makedirs(os.path.join(npy_path, 'results_test_images'))			
-	if not os.path.exists(os.path.join(npy_path, 'results_combined')):
-		os.makedirs(os.path.join(npy_path, 'results_combined'))
+	# npy_path = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/'
+
+	# if not os.path.exists(os.path.join(npy_path, 'results')):
+	# 	os.makedirs(os.path.join(npy_path, 'results'))
+	# if not os.path.exists(os.path.join(npy_path, 'results_test_images')):
+	# 	os.makedirs(os.path.join(npy_path, 'results_test_images'))			
+	# if not os.path.exists(os.path.join(npy_path, 'results_combined')):
+	# 	os.makedirs(os.path.join(npy_path, 'results_combined'))
+	# if not os.path.exists(os.path.join(npy_path, 'results_intersected')):
+	# 	os.makedirs(os.path.join(npy_path, 'results_intersected'))
 
 	for index in x_set_indices:
 
@@ -430,6 +437,15 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 		batch_start = 0
 		batch_end = batch_size
 		folder_total = len(image_folder)
+
+		if not os.path.exists(os.path.join(npy_path, 'results/'+file_list[index]+ '/')):
+			os.makedirs(os.path.join(npy_path, 'results/'+file_list[index]+ '/'))
+		if not os.path.exists(os.path.join(npy_path, 'results_test_images/'+file_list[index]+ '/')):
+			os.makedirs(os.path.join(npy_path, 'results_test_images/'+file_list[index]+ '/'))			
+		if not os.path.exists(os.path.join(npy_path, 'results_combined/'+file_list[index]+ '/')):
+			os.makedirs(os.path.join(npy_path, 'results_combined/'+file_list[index]+ '/'))
+		if not os.path.exists(os.path.join(npy_path, 'results_intersected/'+file_list[index]+ '/')):
+			os.makedirs(os.path.join(npy_path, 'results_intersected/'+file_list[index]+ '/'))
 
 		while batch_start< folder_total:
 
@@ -459,7 +475,7 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 				# predicted_label.save(path, 'jpg')
 				# cv2.imwrite(path, predicted_label[0])
 
-				predicted_image = cv2.imread(path)
+				predicted_image = cv2.imread(path) # have to read it from saved image because addWeighted throws error on 'predicted_label' array
 
 
 				# print(type(predicted_image))
@@ -467,16 +483,51 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 				# print(type(test_img))
 				# print(test_img.shape)
 
-
+				# to overlay prediction on the test image with transparency
 				combined_image = cv2.addWeighted(predicted_image, 0.4, test_img, 0.6, 0)
 
 				filepath3 = os.path.join(npy_path, 'results_combined/'+file_list[index]+'/'+ image_folder[iImage])
 				cv2.imwrite(filepath3, combined_image)
 
+				# to compare predicted label and actual label, and display red for wrong prediction and blue for correct predictions, pixel-wise
+				filepath4 = os.path.join(labelpath, label_list[index]+'/'+ label_folder[iImage])
+				actual_label = cv2.imread(filepath4)
+
+				red = np.array([255, 0, 0])
+				blue =np.array([0, 0, 255])
+				#open cv manipulates images as BGR, not RGB
+				cv_blue = np.array([255, 0, 0])
+				cv_red =np.array([0, 0, 255])
+				
+				intersect_image = np.ndarray((actual_label.shape[0],actual_label.shape[1],3), dtype=np.uint8)
+
+				if predicted_image.shape == actual_label.shape:
+
+					for i in range(actual_label.shape[0]):
+						for j in range(actual_label.shape[1]):
+							pixel = actual_label[i,j]
+							predicted_pixel = predicted_image[i, j]
+							# print(pixel)
+							if (pixel.argmax(axis=-1) == red.argmax(axis=-1)) or (pixel.argmax(axis=-1) == blue.argmax(axis=-1)):
+								if pixel.argmax(axis=-1) == predicted_pixel.argmax(axis=-1):
+									intersect_image[i, j, :] = cv_blue
+									match+=1
+									# print('yes')
+								else:
+									intersect_image[i, j, :] = cv_red
+									wrong+=1
+					print (match/(float)(match+wrong))
+					sum+= match/(float)(match+wrong)
+					count+=1
+
+				filepath5 = os.path.join(npy_path, 'results_intersected/'+file_list[index]+'/'+ image_folder[iImage])
+				cv2.imwrite(filepath5, intersect_image)
+
 				i+=1
 				batch_start += batch_size
 				batch_end += batch_size
-
+	print(count)
+	print ("Percentage: ", sum/(float)(count))
 
 if __name__ == '__main__':
 
@@ -517,6 +568,8 @@ if __name__ == '__main__':
 	# myunet.train_kfold()# uncomment for kfold cross-validation
 	myunet.train_batch()
 	# myunet.save_img()# comment for kfold cross-validation
+
+	# predict_and_save(model,filepath, labelpath, x_test, save = True)
 
 
 

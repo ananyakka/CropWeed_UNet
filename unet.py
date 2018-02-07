@@ -24,6 +24,7 @@ import cv2
 import tensorflow as tf
 import random as rn
 from sklearn.model_selection import StratifiedKFold, KFold
+from make_confusion_matrix import make_confusion_matrix
 # import keras.backend.tensorflow_backend
 
 from data_generator import my_generator #my_generator(filepath, labelpath, x_set_indices, batch_size)
@@ -188,6 +189,8 @@ class myUnet(object):
 		print(imgs_test.shape)
 
 		print("loading data done")
+		# model = load_model('/extend_sda/Ananya_files/Weeding Bot Project/Codes/Keras TF/Segmentation/UNet/images_200by200/augmented/unet_trial3.hdf5') # load a trained model of unet
+
 		model = self.get_unet()
 		print("got unet")
 
@@ -313,7 +316,7 @@ class myUnet(object):
 		test_generator = my_generator(filepath, labelpath, x_test, 1)
 		
 		# model = self.get_unet()
-		model = load_model('unet.hdf5') # load a trained model of unet
+		model = load_model('/extend_sda/Ananya_files/Weeding Bot Project/Codes/Keras TF/Segmentation/UNet/images_200by200/augmented/unet_trial3.hdf5') # load a trained model of unet
 		print("got unet")
 
 		# model_checkpoint = ModelCheckpoint('unet.hdf5', monitor='val_loss',verbose=1, save_best_only=True)
@@ -342,31 +345,31 @@ class myUnet(object):
 
 		print("array to image")
 		#Path to read test images and predicted labels from
-		imgs_mask = np.load('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/imgs_predicted_mask_test702010.npy')
+		# imgs_mask = np.load('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/imgs_predicted_mask_test702010.npy')
 		# imgs_test = np.load('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/imgs_test702010.npy')
 
-		# Folders to save test images, predicted labels and their overlay
-		if not os.path.exists('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/results'):
-			os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/results')
-		if not os.path.exists('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/results_test_images'):
-			os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/results_test_images')			
-		if not os.path.exists('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/results_combined'):
-			os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/results_combined')		
-
-
-		# #Path to read test images and predicted labels from
-		# imgs_mask = np.load('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/imgs_predicted_mask_test.npy')
-		# print(imgs_mask.shape)
-		# imgs_test = np.load('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/imgs_test.npy')
-		# print(imgs_test.shape)
-
 		# # Folders to save test images, predicted labels and their overlay
-		# if not os.path.exists('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/results'):
-		# 	os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/results')
-		# if not os.path.exists('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/results_test_images'):
-		# 	os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/results_test_images')			
-		# if not os.path.exists('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/results_combined'):
-		# 	os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/results_combined')	
+		# if not os.path.exists('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/results'):
+		# 	os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/results')
+		# if not os.path.exists('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/results_test_images'):
+		# 	os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/results_test_images')			
+		# if not os.path.exists('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/results_combined'):
+		# 	os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/results_combined')		
+
+
+		#Path to read test images and predicted labels from
+		imgs_mask = np.load('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/imgs_predicted_mask_test.npy')
+		print(imgs_mask.shape)
+		imgs_test = np.load('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/imgs_test.npy')
+		print(imgs_test.shape)
+
+		# Folders to save test images, predicted labels and their overlay
+		if not os.path.exists('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/results'):
+			os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/results')
+		if not os.path.exists('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/results_test_images'):
+			os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/results_test_images')			
+		if not os.path.exists('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/results_combined'):
+			os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/results_combined')	
 
 
 		for i in range(imgs_mask.shape[0]):
@@ -374,22 +377,22 @@ class myUnet(object):
 			img = imgs_mask[i]
 			# print(img.size)
 			img = array_to_img(img)
-			img.save("/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/results/%d.jpg"%(i))
+			img.save("/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/results/%d.jpg"%(i))
 			img = imgs_test[i]	
 			img = array_to_img(img)
-			img.save("/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/results_test_images/%d.jpg"%(i))
+			img.save("/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/results_test_images/%d.jpg"%(i))
 
 			# add translucent label(img1) to original image(img2)
-			filepath1 = os.path.join("/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/results/", str(i)+'.jpg')
+			filepath1 = os.path.join("/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/results/", str(i)+'.jpg')
 			img1 = cv2.imread(filepath1)
 			# img4 = img1[:,:,1]
 
-			filepath2 = os.path.join("/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/results_test_images/", str(i)+'.jpg')
+			filepath2 = os.path.join("/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/results_test_images/", str(i)+'.jpg')
 			img2 = cv2.imread(filepath2)
 
 			img3 = cv2.addWeighted(img1, 0.4, img2, 0.6, 0)
 
-			filepath3 = os.path.join("/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/results_combined/", str(i)+'.jpg')
+			filepath3 = os.path.join("/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/npydata/results_combined/", str(i)+'.jpg')
 			cv2.imwrite(filepath3, img3)
 
 
@@ -411,14 +414,19 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 	label_list = list(os.listdir(labelpath))
 	batch_size = 1
 
+	sum = 0
+	count = 0
+	total_confusion_mat = np.zeros((3,3))
+	total_confusion_mat_percent = np.zeros((3,3))
+
 	# Folders to save test images, predicted labels and their overlay
 	npy_path = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/'
-	if not os.path.exists(os.path.join(npy_path, 'results')):
-		os.makedirs(os.path.join(npy_path, 'results'))
-	if not os.path.exists(os.path.join(npy_path, 'results_test_images')):
-		os.makedirs(os.path.join(npy_path, 'results_test_images'))			
-	if not os.path.exists(os.path.join(npy_path, 'results_combined')):
-		os.makedirs(os.path.join(npy_path, 'results_combined'))
+	# if not os.path.exists(os.path.join(npy_path, 'results')):
+	# 	os.makedirs(os.path.join(npy_path, 'results'))
+	# if not os.path.exists(os.path.join(npy_path, 'results_test_images')):
+	# 	os.makedirs(os.path.join(npy_path, 'results_test_images'))			
+	# if not os.path.exists(os.path.join(npy_path, 'results_combined')):
+	# 	os.makedirs(os.path.join(npy_path, 'results_combined'))
 
 	for index in x_set_indices:
 
@@ -431,6 +439,15 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 		batch_end = batch_size
 		folder_total = len(image_folder)
 
+		if not os.path.exists(os.path.join(npy_path, 'results/'+file_list[index]+ '/')):
+			os.makedirs(os.path.join(npy_path, 'results/'+file_list[index]+ '/'))
+		if not os.path.exists(os.path.join(npy_path, 'results_test_images/'+file_list[index]+ '/')):
+			os.makedirs(os.path.join(npy_path, 'results_test_images/'+file_list[index]+ '/'))			
+		if not os.path.exists(os.path.join(npy_path, 'results_combined/'+file_list[index]+ '/')):
+			os.makedirs(os.path.join(npy_path, 'results_combined/'+file_list[index]+ '/'))
+		if not os.path.exists(os.path.join(npy_path, 'results_intersected/'+file_list[index]+ '/')):
+			os.makedirs(os.path.join(npy_path, 'results_intersected/'+file_list[index]+ '/'))
+
 		while batch_start< folder_total:
 
 			limit = min(batch_end, folder_total)
@@ -439,14 +456,19 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 			i=0
 
 			for iImage in list_images:
+				
+				match = 0
+				wrong = 0
 
+				# '''
 				# test_img = load_img(os.path.join(filepath, file_list[index])+'/'+ image_folder[iImage], grayscale = False)
 				filepath1 = os.path.join(filepath, file_list[index]+'/'+ image_folder[iImage])
 				test_img = cv2.imread(filepath1)
 				test_img_exp=np.expand_dims(test_img, axis=0)
 
-				filepath2 = os.path.join(npy_path, 'results_test_images/'+file_list[index]+ '_'+image_folder[iImage])
+				filepath2 = os.path.join(npy_path, 'results_test_images/'+file_list[index]+ '/'+image_folder[iImage])
 				# print(file_list[index])
+				# print(image_folder[iImage])
 				# print(filepath2)
 				cv2.imwrite(filepath2, test_img)
 
@@ -454,7 +476,8 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 				# print(predicted_label[0].shape)
 				# predicted_label = array_to_img(predicted_label)
 				predicted_label = array_to_img(predicted_label[0])
-				path = os.path.join(npy_path, 'results/'+file_list[index]+'_'+image_folder[iImage])
+				# '''
+				path = os.path.join(npy_path, 'results/'+file_list[index]+'/'+image_folder[iImage])
 				predicted_label.save(path)
 				# predicted_label.save(path, 'jpg')
 				# cv2.imwrite(path, predicted_label[0])
@@ -467,15 +490,65 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 				# print(type(test_img))
 				# print(test_img.shape)
 
-
+				# '''
 				combined_image = cv2.addWeighted(predicted_image, 0.4, test_img, 0.6, 0)
 
-				filepath3 = os.path.join(npy_path, 'results_combined/'+file_list[index]+ image_folder[iImage])
+				filepath3 = os.path.join(npy_path, 'results_combined/'+file_list[index]+'/'+ image_folder[iImage])
 				cv2.imwrite(filepath3, combined_image)
+				# '''
+
+				# to compare predicted label and actual label, and display red for wrong prediction and blue for correct predictions, pixel-wise
+				filepath4 = os.path.join(labelpath, label_list[index]+'/'+ label_folder[iImage])
+				actual_label = cv2.imread(filepath4)
+
+				red = np.array([255, 0, 0])
+				blue =np.array([0, 0, 255])
+
+				#open cv manipulates images as BGR, not RGB
+				cv_blue = np.array([255, 0, 0])
+				cv_red =np.array([0, 0, 255])
+
+				intersect_image = actual_label
+
+				if predicted_image.shape == actual_label.shape:
+
+					for i in range(actual_label.shape[0]):
+						for j in range(actual_label.shape[1]):
+							pixel = actual_label[i,j]
+							predicted_pixel = predicted_image[i, j]
+							# print(pixel)
+							if (pixel.argmax(axis=-1) == red.argmax(axis=-1)) or (pixel.argmax(axis=-1) == blue.argmax(axis=-1)):
+								if pixel.argmax(axis=-1) == predicted_pixel.argmax(axis=-1):
+									intersect_image[i, j, :] = cv_blue
+									match+=1
+									# print('yes')
+								else:
+									intersect_image[i, j, :] = cv_red
+									wrong+=1
+					# print (match/(float)(match+wrong))
+					sum+= match/(float)(match+wrong)
+					count+=1
+
+				filepath5 = os.path.join(npy_path, 'results_intersected/'+file_list[index]+'/'+ image_folder[iImage])
+				cv2.imwrite(filepath5, intersect_image)
+
+				confusion_mat = make_confusion_matrix(actual_label, predicted_image)
+				total_confusion_mat+= confusion_mat
+				# print(total_confusion_mat)
+
 
 				i+=1
 				batch_start += batch_size
 				batch_end += batch_size
+
+	for iRow in range(total_confusion_mat.shape[0]):
+		total_confusion_mat_percent[iRow, :] = total_confusion_mat[iRow, :]/ np.sum(total_confusion_mat[iRow, :])
+
+
+	# print(count)
+	print ("Percentage: ", sum/(float)(count))
+	print("Confusion Matrix", total_confusion_mat)
+	print("Percentage Confusion Matrix", total_confusion_mat_percent)
 
 
 if __name__ == '__main__':
