@@ -291,8 +291,8 @@ def random_erasing(image, rectangle_area):
 ## Main 
 
 #Target size
-row_size = 200
-col_size = 200
+row_size = 500
+col_size = 500
 seed = 100
 image_directory = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Labelled Photos'
 labels_directory = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Three Class Labels'
@@ -302,12 +302,12 @@ incr_angle = (max_angle-0)/50
 angles = np.arange(0, max_angle, incr_angle)
 
 images = glob.glob(image_directory+"/*.png")
-if not os.path.exists('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Augmented_train_images'):
-	os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Augmented_train_images')
+if not os.path.exists('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Augmented_train_images_1000by1000'):
+	os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Augmented_train_images_1000by1000')
 
 labels = glob.glob(labels_directory+"/*.png")
-if not os.path.exists('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Augmented_train_labels'):
-	os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Augmented_train_labels')
+if not os.path.exists('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Augmented_train_labels_1000by1000'):
+	os.makedirs('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Augmented_train_labels_1000by1000')
 
 for img in images:
 
@@ -318,7 +318,7 @@ for img in images:
 	nrows, ncols, nchannels = original_img.shape
 
 	#Make a new for each image to store all its augmented images
-	folder_path = os.path.join('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Augmented_train_images/', newfilename)
+	folder_path = os.path.join('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Augmented_train_images_1000by1000/', newfilename)
 	if not os.path.exists(folder_path):
 		os.makedirs(folder_path)
 
@@ -431,12 +431,12 @@ for img in labels:
 	nrows, ncols, nchannels = original_img.shape
 
 	#Make a new for each image to store all its augmented images
-	folder_path = os.path.join('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Augmented_train_labels/', newfilename)
+	folder_path = os.path.join('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Augmented_train_labels_1000by1000/', newfilename)
 	if not os.path.exists(folder_path):
 		os.makedirs(folder_path)
 
 	#Rotation
-	print('Rotating Image')
+	print('Rotating Labels')
 	iAngle = 0
 	for angle in angles:
 		rotated_image = rotate_max_area(original_img, angle)

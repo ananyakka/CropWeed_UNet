@@ -12,7 +12,7 @@ os.environ['PYTHONHASHSEED'] = '0'
 
 import numpy as np
 from keras.models import *
-from keras.layers import Input, merge, Conv2D, MaxPooling2D, UpSampling2D, Dropout, Cropping2D, Activation
+from keras.layers import Input, merge, Conv2D, MaxPooling2D, UpSampling2D, Dropout, Cropping2D, Activation, Reshape
 from keras.activations import softmax
 from keras.optimizers import *
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler, EarlyStopping,ReduceLROnPlateau
@@ -23,8 +23,14 @@ from PIL import Image
 import cv2
 import tensorflow as tf
 import random as rn
+import time
 from sklearn.model_selection import StratifiedKFold, KFold
 from make_confusion_matrix import make_confusion_matrix
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+from sklearn.utils.class_weight import compute_class_weight, compute_sample_weight
+from sklearn.metrics import f1_score
+from train_params import f_score_weighted_loss, f_score_weighted
 # import keras.backend.tensorflow_backend
 
 from data_generator import my_generator #my_generator(filepath, labelpath, x_set_indices, batch_size)
@@ -135,17 +141,18 @@ class myUnet(object):
 		# conv9 = Conv2D(2, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
 		# conv10 = Conv2D(3, 1, activation = 'softmax')(conv9)
 		out = Conv2D(3, 1, activation = 'softmax')(conv9)
+		out_flatten = Reshape((-1,3))(out)
 		# conv11 = Conv2D(3, 1, activation = 'softmax')(conv10)
 
 		# out = Activation('softmax')(conv10)
-		print(out.get_shape())
+		# print(out_flatten.get_shape())
 
 		model = Model(input = inputs, output =out)
 		model.summary()
 
-		model.compile(optimizer = Adam(lr = 1e-4), loss = 'categorical_crossentropy', metrics = ['accuracy'])
+		# model.compile(optimizer = Adam(lr = 1e-4), loss = f_score_weighted_loss, metrics = [f_score_weighted])
 		# model.compile(optimizer = Adam(lr = 1e-4), loss = jaccard_cross_entropy_loss, metrics = [ jaccard_coef])
-		# model.compile(optimizer = Adam(lr = 1e-4), loss = dice_cross_entropy_loss, metrics = [ dice_coef])
+		model.compile(optimizer = Adam(lr = 1e-4), loss = dice_coef_loss, metrics = [ dice_coef])
 		# model.compile(optimizer = Adam(lr = 1e-4), loss = dice_cross_entropy_loss, metrics = [ dice_coef])
 		
 
@@ -184,6 +191,8 @@ class myUnet(object):
 		# sess = tf.Session(graph=tf.get_default_graph(), config=session_conf)
 		# keras.set_session(sess)
 
+
+
 		print(imgs_train.shape)
 		print(imgs_mask_train.shape)
 		print(imgs_test.shape)
@@ -198,7 +207,7 @@ class myUnet(object):
 		print('Fitting model...')
 		early_stopping = EarlyStopping(monitor='val_loss', min_delta = 0, patience=5)
 		adjust_learning_rate = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, verbose=0, mode='auto', epsilon=0.0001, cooldown=0, min_lr=0)
-		model.fit(imgs_train, imgs_mask_train, batch_size=4, nb_epoch=500, verbose=1,validation_split=0.2, shuffle=True, callbacks=[model_checkpoint, early_stopping, adjust_learning_rate])
+		model.fit(imgs_train, imgs_mask_train, batch_size=4, nb_epoch=50, verbose=1,validation_split=0.2, shuffle=True, callbacks=[model_checkpoint, early_stopping, adjust_learning_rate])
 
 		print('predict test data')
 		imgs_predicted_mask_test = model.predict(imgs_test, batch_size=1, verbose=1)
@@ -314,19 +323,63 @@ class myUnet(object):
 		training_generator = my_generator(filepath, labelpath, x_train, batch_size)
 		validation_generator = my_generator(filepath, labelpath, x_val, batch_size)
 		test_generator = my_generator(filepath, labelpath, x_test, 1)
+
+		# ## Find class weights for an imbalanced dataset
+		# # Convert on one hot labels to class labels
+		# #https://stackoverflow.com/a/44855957
+
+		# # Create a pd.series that represents the categorical class of each one-hot encoded row
+		# label_sample = np.identity(3)
+		# df_y = pd.DataFrame(label_sample)
+		# y_classes = df_y.idxmax(1, skipna=False)
+		# print('y_classes')
+		# print(y_classes)
+
+
+		# # Instantiate the label encoder
+		# le = LabelEncoder()
+
+		# # Fit the label encoder to our label series
+		# le.fit(list(y_classes))
+
+		# # Create integer based labels Series
+		# y_integers = le.transform(list(y_classes))
+
+		# # Create dict of labels : integer representation
+		# labels_and_integers = dict(zip(y_classes, y_integers))
+
+		# class_weights = compute_class_weight('balanced', np.unique(y_integers), y_integers)
+		# sample_weights = compute_sample_weight('balanced', y_integers)
+
+		# class_weights_dict = dict(zip(le.transform(list(le.classes_)), class_weights))
+		# print('class_weights')
+		# print(class_weights_dict)
+
+
 		
-		# model = self.get_unet()
-		model = load_model('/extend_sda/Ananya_files/Weeding Bot Project/Codes/Keras TF/Segmentation/UNet/images_200by200/augmented/unet_trial3.hdf5') # load a trained model of unet
+		model = self.get_unet()
+		# model = load_model('/extend_sda/Ananya_files/Weeding Bot Project/Codes/Keras TF/Segmentation/UNet/images_200by200/augmented/unet_trial3.hdf5') # load a trained model of unet
 		print("got unet")
 
-		# model_checkpoint = ModelCheckpoint('unet.hdf5', monitor='val_loss',verbose=1, save_best_only=True)
-		# print('Fitting model...')
-		# early_stopping = EarlyStopping(monitor='val_loss', min_delta = 0.0001, patience=5)
-		# adjust_learning_rate = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, verbose=0, mode='auto', epsilon=0.0001, cooldown=0, min_lr=0)
-		# model.fit_generator(training_generator, epochs=500, steps_per_epoch=2000, verbose=1, callbacks=[model_checkpoint, early_stopping, adjust_learning_rate], validation_data = validation_generator, validation_steps = 610 )
-		#steps are found by dividing total images by batch size; (68080/32 ~= 2127), (19536/32 ~= 610)
+		model_checkpoint = ModelCheckpoint('unet.hdf5', monitor='val_loss',verbose=1, save_best_only=True)
+		print('Fitting model...')
+		early_stopping = EarlyStopping(monitor='val_loss', min_delta = 0.0001, patience=5)
+		adjust_learning_rate = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, verbose=0, mode='auto', epsilon=0.0001, cooldown=0, min_lr=0)
+		start_time = time.time()
+		# model.fit_generator(training_generator, epochs=50, steps_per_epoch=2000, verbose=1, callbacks=[model_checkpoint], validation_data = validation_generator, validation_steps = 610 )
+		# train_steps_per_epoch = np.math.ceil(training_generator.samples / training_generator.batch_size)
+		# print(train_steps_per_epoch)
+		# print(val_steps_per_epoch)
+		# val_steps_per_epoch = np.math.ceil(validation_generator.samples / validation_generator.batch_size)
+		model.fit_generator(training_generator, epochs=50, steps_per_epoch=2000, verbose=1, callbacks=[model_checkpoint, early_stopping, adjust_learning_rate], validation_data = validation_generator, validation_steps = 610 )
+		##steps are found by dividing total images by batch size; (68080/32 ~= 2127), (19536/32 ~= 610)
+		end_time = time.time()
+
+		total_mins = (end_time - start_time)/60
+		print("Training time: %0.2f min"% total_mins)
 
 		print('predict test data')
+		start_time = time.time()
 		# imgs_predicted_mask_test = model.predict_generator(test_generator, steps=9768, max_queue_size=10, workers=1, verbose=1)
 		# #steps: (9768/32 ~=305)
 
@@ -334,7 +387,10 @@ class myUnet(object):
 		# np.save('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/imgs_predicted_mask_test702010.npy', imgs_predicted_mask_test)
 
 		predict_and_save(model,filepath, labelpath, x_test, save = True)
+		end_time = time.time()
 
+		total_mins = (end_time - start_time)/60
+		print("Prediction time: %0.2f min"% total_mins)
 
 		print('evaluate test data')
 		score = model.evaluate_generator(test_generator, steps=9768, max_queue_size=10, workers=1)
@@ -448,7 +504,7 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 		if not os.path.exists(os.path.join(npy_path, 'results_intersected/'+file_list[index]+ '/')):
 			os.makedirs(os.path.join(npy_path, 'results_intersected/'+file_list[index]+ '/'))
 
-		while batch_start< folder_total:
+		while batch_end< folder_total:
 
 			limit = min(batch_end, folder_total)
 			list_images = range(batch_start,batch_end)
@@ -538,8 +594,8 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 
 
 				i+=1
-				batch_start += batch_size
-				batch_end += batch_size
+			batch_start += batch_size
+			batch_end += batch_size
 
 	for iRow in range(total_confusion_mat.shape[0]):
 		total_confusion_mat_percent[iRow, :] = total_confusion_mat[iRow, :]/ np.sum(total_confusion_mat[iRow, :])
@@ -583,7 +639,7 @@ if __name__ == '__main__':
 
 
 	myunet = myUnet()
-	# model = myunet.get_unet()
+	model = myunet.get_unet()
 
 
 	# myunet.train() # comment for kfold cross-validation

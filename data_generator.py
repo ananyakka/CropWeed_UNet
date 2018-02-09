@@ -60,13 +60,14 @@ def my_generator(filepath, labelpath, x_set_indices, batch_size):
 			nBatch_in_folder = int(len(image_folder)/batch_size)
 
 			imgdata = np.ndarray((batch_size, rows,cols,3), dtype=np.uint8)
+			# imglabels = np.ndarray((batch_size,rows*cols,3), dtype=np.uint8)
 			imglabels = np.ndarray((batch_size,rows,cols,3), dtype=np.uint8)
 
 			batch_start = 0
 			batch_end = batch_size
 			folder_total = len(image_folder)
 
-			while batch_start< folder_total:
+			while batch_end< folder_total:
 
 				limit = min(batch_end, folder_total)
 				list_images = range(batch_start,batch_end)
@@ -86,16 +87,39 @@ def my_generator(filepath, labelpath, x_set_indices, batch_size):
 					# cv2.imshow('current image',img)
 					# cv2.waitKey()
 					# label = img_to_array(label)
+
 					label = array(label)
+					# imglabels_reshaped = label.reshape((-1,3))
+					# print(imglabels_reshaped.shape)
 
 					imgdata[i] = img
 
+					# imglabels[i] = imglabels_reshaped
 					imglabels[i] = label
 					i+=1
+					# print(i)
+					# if i%32 == 0:
+					# 	print('i32')
+					# 	print(i)
+
+					# if i%32 == 0:
+					# 	print('iImage32')
+					# 	print(iImage)
+					# print(imglabels.shape)
+				# print("batch_start")
+				# print(batch_start)
+
+				# print("batch_end")
+				# print(batch_end)
+
+					
+					
 
 
-					yield imgdata, imglabels
-					batch_start += batch_size
-					batch_end += batch_size
+					# yield imgdata, imglabels.reshape((i-1, -1, 3))
+				# print('yielding')
+				yield imgdata, imglabels
+				batch_start += batch_size
+				batch_end += batch_size
 
 
