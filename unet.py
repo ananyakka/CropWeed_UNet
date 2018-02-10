@@ -152,8 +152,9 @@ class myUnet(object):
 
 		# model.compile(optimizer = Adam(lr = 1e-4), loss = f_score_weighted_loss, metrics = [f_score_weighted])
 		# model.compile(optimizer = Adam(lr = 1e-4), loss = jaccard_cross_entropy_loss, metrics = [ jaccard_coef])
-		model.compile(optimizer = Adam(lr = 1e-4), loss = dice_coef_loss, metrics = [ dice_coef])
-		# model.compile(optimizer = Adam(lr = 1e-4), loss = dice_cross_entropy_loss, metrics = [ dice_coef])
+		model.compile(optimizer = Adam(lr = 1e-4), loss = weighted_dice_coef_loss, metrics = [ weighted_dice_coef])
+
+		# model.compile(optimizer = Adam(lr = 1e-4), loss = mean_cross_entropy, metrics = [ 'accuracy'])
 		
 
 		return model
@@ -474,6 +475,10 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 	count = 0
 	total_confusion_mat = np.zeros((3,3))
 	total_confusion_mat_percent = np.zeros((3,3))
+	classwise_accuracy = np.zeros(3)
+	precision_score_class= np.zeros(3)
+	recall_score_class= np.zeros(3)
+	sensitivity= np.zeros(3)
 
 	# Folders to save test images, predicted labels and their overlay
 	npy_path = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/'
@@ -585,6 +590,11 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 					sum+= match/(float)(match+wrong)
 					count+=1
 
+				classwise_accuracy+= recall_score_class(actual_label, predicted_label)
+				precision_score_class+= precision_score_class(actual_label, predicted_label)
+				recall_score_class+= recall_score_class(actual_label, predicted_label)
+				sensitivity+= sensitivity(actual_label, predicted_label)
+
 				filepath5 = os.path.join(npy_path, 'results_intersected/'+file_list[index]+'/'+ image_folder[iImage])
 				cv2.imwrite(filepath5, intersect_image)
 
@@ -605,6 +615,10 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 	print ("Percentage: ", sum/(float)(count))
 	print("Confusion Matrix", total_confusion_mat)
 	print("Percentage Confusion Matrix", total_confusion_mat_percent)
+	print("Classwise accuracy", classwise_accuracy)
+	print("Precision",precision_score_class)
+	print("Recall", recall_score_class)
+	print("Sensitivity", sensitivity)
 
 
 if __name__ == '__main__':

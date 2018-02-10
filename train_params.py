@@ -1,7 +1,21 @@
+'''
+Custom metrics and losses
+So far contains working versions of:
+dice_coef, dice_coef_loss
+jaccard_coef, jaccard_coef_loss
+weighted_dice_coef, weighted_dice_coef_loss
+mean_cross_entropy
+f_score_weighted, f_score_weighted_loss
+precision_score_class
+recall_score_class
+sensitivity
+'''
+
 
 from keras import backend as K
 
 from keras.losses import categorical_crossentropy
+from keras.layers import multiply
 
 from sklearn.metrics import f1_score
 import numpy as np
@@ -49,6 +63,7 @@ def dice_coef(y_true, y_pred, smooth=0.0):
 	print('mult shape')
 	print((y_true*y_pred).shape)
 	intersection = K.sum(y_true * y_pred, axis=[1,2])
+	# intersection = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)), axis=[1,2]) # if the y values aren't between 0 and 1 already
 	print(intersection.shape)
 	print('intersection.shape')
 	summation = K.sum(y_true, axis=[1,2]) + K.sum(y_pred, axis=[1,2])
@@ -64,11 +79,30 @@ def dice_coef(y_true, y_pred, smooth=0.0):
 def dice_coef_loss(y_true, y_pred):
 	return  -dice_coef(y_true, y_pred, smooth=0.0)
 
+def weighted_dice_coef(y_true, y_pred, smooth=0.0):
+	#Average dice coefficient per batch.
+
+	num_samples = K.sum(K.round(y_pred), axis=[1,2]) # number of samples = number of positives/ones in each layer in the true labels
+	total_samples = K.sum(num_samples, axis=-1,keepdims=True)
+	prop_samples=num_samples/total_samples
+	weights = 1/prop_samples
+	# weights /= sum(weights)
+
+	intersection = K.sum(y_true * y_pred, axis=[1,2])
+	# intersection = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)), axis=[1,2])# if the y values aren't between 0 and 1 already
+	summation = K.sum(y_true, axis=[1,2]) + K.sum(y_pred, axis=[1,2])
+
+	dice = K.mean((2.0 * intersection*weights + smooth) / (summation*weights + smooth))
+
+	return dice 
+
+def weighted_dice_coef_loss(y_true, y_pred):
+	return  -weighted_dice_coef(y_true, y_pred, smooth=0.0)
 
 def jaccard_coef(y_true, y_pred, smooth=0.0):
 	#Average jaccard coefficient per batch.
-	intersection = K.sum(y_true * y_pred, axis=[0,-1,-2])
-	union = K.sum(y_true, axis=[0,-1,-2]) + K.sum(y_pred, axis=[0,-1,-2]) - intersection
+	intersection = K.sum(y_true * y_pred, axis=[1,2])
+	union = K.sum(y_true, axis=[1,2]) + K.sum(y_pred, axis=[1,2]) - intersection
 	return K.mean( (intersection + smooth) / (union + smooth))
 
 def jaccard_coef_loss(y_true, y_pred):
@@ -80,22 +114,151 @@ def jaccard_cross_entropy_loss(y_true, y_pred):
 def dice_cross_entropy_loss(y_true, y_pred):
 	return dice_coef_loss(y_true, y_pred) + categorical_crossentropy(y_true, y_pred)
 
+# def mean_cross_entropy(y_true, y_pred): # doesn't work : ?? how to multiply weights into the losses
+# 	#Source: https://gist.github.com/wassname/ce364fddfc8a025bfab4348cf5de852d
+# 	"""
+# 	A weighted version of keras.objectives.categorical_crossentropy
+
+# 	Variables:
+# 	weights: numpy array of shape (C,) where C is the number of classes
+
+# 	Usage:
+# 	weights = np.array([0.5,2,10]) # Class one at 0.5, class 2 twice the normal weights, class 3 10x.
+# 	# loss = weighted_categorical_crossentropy(weights)
+# 	# model.compile(loss=loss,optimizer='adam')
+# 	"""
+	
+# 	# weights = np.array([0.5,2,10])
+# 	# weights = K.variable(weights)
+
+
+# 	num_samples = K.sum(y_pred, axis=[1,2]) # number of samples = number of positives/ones in each layer in the true labels
+# 	print('num sampels')
+# 	print(num_samples.shape)
+# 	total_samples = K.sum(num_samples, axis=-1,keepdims=True)
+# 	print('total samples')
+# 	print(total_samples.shape)
+# 	prop_samples=num_samples/total_samples
+# 	weights = 1/prop_samples
+
+# 	# weights0 = K.ones_like(y_pred[:,:,:,0]).*weights[:,0]
+# 	weights0 = multiply((y_pred[:,:,:,0],weights[:,0]))
+# 	weights1 = multiply((y_pred[:,:,:,1],weights[:,1]))
+# 	weights2 = multiply((y_pred[:,:,:,2],weights[:,2]))
+# 	# weights1 = K.ones_like(y_pred[:,:,:,1]).*weights[:,1]
+# 	# weights2 = K.ones_like(y_pred[:,:,:,2]).*weights[:,2]
+# 	weights = K.stack((weights0,weights1,weights2), axis=-1)
+# 	# print(loss0.shape)
+# 	# loss1 = loss[:,:,:,1]*weights[:,1]
+# 	# loss2 = loss[:,:,:,2]*weights[:,2]
+# 	# weights = K.variable(weights)
+# 	print(type(weights))
+# 	print('weight shape')
+# 	print(weights.shape)
+
+# 	# scale predictions so that the class probas of each sample sum to 1
+# 	y_pred /= K.sum(y_pred, axis=-1, keepdims=True)
+# 	# clip to prevent NaN's and Inf's
+# 	y_pred = K.clip(y_pred, K.epsilon(), 1 - K.epsilon())
+# 	# calc
+# 	loss = y_true * K.log(y_pred)
+
+# 	# loss_weighted = loss0+loss1+loss2
+# 	print("loss shape")
+# 	print(loss.shape)
+	
+# 	# loss_weighted = K.dot(loss, weights)
+# 	loss_weighted = weights* loss
+# 	# print("loss shape")
+# 	# print(loss_weighted.shape)
+# 	# loss_weighted = -K.sum(loss, -1)
+# 	print(loss_weighted.shape)
+# 	return -loss_weighted
+def mean_cross_entropy(y_true, y_pred):
+	"""
+	A weighted version of keras.objectives.categorical_crossentropy
+
+	Variables:
+	weights: numpy array of shape (C,) where C is the number of classes
+
+	Usage:
+	weights = np.array([0.5,2,10]) # Class one at 0.5, class 2 twice the normal weights, class 3 10x.
+	loss = weighted_categorical_crossentropy(weights)
+	model.compile(loss=loss,optimizer='adam')
+	"""
+	# weight order: weeds, background, plants
+	weights = np.array([20,1,1])
+
+	print('weight shape')
+	print(weights.shape)
+	# num_samples = K.sum(y_pred, axis=[1,2]) # number of samples = number of positives/ones in each layer in the true labels
+	# print(num_samples)
+# 	print('num sampels')
+# 	print(num_samples.shape)
+# 	total_samples = K.sum(num_samples, axis=-1,keepdims=True)
+# 	print('total samples')
+# 	print(total_samples.shape)
+# 	prop_samples=num_samples/total_samples
+# 	weights = 1/prop_samples
+	weights = K.variable(weights)
+
+	# scale predictions so that the class probas of each sample sum to 1
+	y_pred /= K.sum(y_pred, axis=-1, keepdims=True)
+	# clip to prevent NaN's and Inf's
+	y_pred = K.clip(y_pred, K.epsilon(), 1 - K.epsilon())
+	# calc
+	loss = y_true * K.log(y_pred) * weights
+	loss = -K.sum(loss, -1)
+	return loss
+
 
 def f_score_weighted(y_true, y_pred):
-	print('y_true.shape')
-	print(y_true.shape)
-	y_true_class = K.max(y_true,axis=-1)
-	print(y_true_class.shape)
-	# y_true_flat = K.expand_dims(y_true_class, -1)
-	# y_true_flat = K.reshape(y_true_class, K.shape(y_true))
-	# print(y_true_flat.shape)
+	precision = precision_score_class(y_true, y_pred)
+	recall = recall_score_class(y_true, y_pred)
 
-	# For Class 1: [0 0 1]
-	true_positive1 = K.sum()
-	
-	
+	num_samples = K.sum(K.round(y_pred), axis=[1,2]) # number of samples = number of positives/ones in each layer in the true labels
+	total_samples = K.sum(num_samples, axis=-1,keepdims=True)
+	prop_samples=num_samples/total_samples
+	weights = 1/prop_samples
+	# weights /= sum(weights)	
 
-	return f1_score(y_true_flat, y_pred_flat, average='weighted')
+	precision_weighted = precision*weights
+	recall_weighted = recall*weights
+
+	f1_score = 2*precision_weighted*recall_weighted/(precision_weighted+recall_weighted)
+	
+	return f1_score
 
 def f_score_weighted_loss(y_true, y_pred):
 	return -f_score_weighted(y_true, y_pred)
+
+def precision_score_class(y_true, y_pred):
+
+	true_positives = K.sum(K.round(y_true * y_pred), axis=[1,2])
+	predicted_positives = K.sum(K.round(y_pred), axis=[1,2])
+
+	precision = true_positives/predicted_positives
+
+	return precision
+
+def recall_score_class(y_true, y_pred):
+	true_positives = K.sum(K.round(y_true * y_pred), axis=[1,2])
+	predicted_positives = K.sum(K.round(y_pred), axis=[1,2])
+	possible_positives =K.sum(K.round(y_true), axis=[1,2])
+
+	recall = predicted_positives/possible_positives
+
+	return recall
+
+def sensitivity(y_true, y_pred):
+	return recall_score_class(y_true, y_pred)
+
+# def specificity(y_true, y_pred):
+# 	true_positives = K.sum(K.round(y_true * y_pred), axis=[1,2])
+# 	predicted_positives = K.sum(K.round(y_pred), axis=[1,2])
+# 	possible_positives =K.sum(K.round(y_true), axis=[1,2])
+
+# 	false_positive = predicted_positives - true_positives
+# 	true_negative = 
+# 	specificity = false_positive / (false_positive+true_negative)
+# 	return specificity
