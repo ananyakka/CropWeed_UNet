@@ -30,7 +30,7 @@ import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 from sklearn.utils.class_weight import compute_class_weight, compute_sample_weight
 from sklearn.metrics import f1_score
-from train_params import f_score_weighted_loss, f_score_weighted
+from train_params import f_score_weighted_loss, f_score_weighted, weighted_dice_coef_loss, weighted_dice_coef
 # import keras.backend.tensorflow_backend
 
 from data_generator import my_generator #my_generator(filepath, labelpath, x_set_indices, batch_size)
@@ -151,11 +151,10 @@ class myUnet(object):
 		model.summary()
 
 		# model.compile(optimizer = Adam(lr = 1e-4), loss = f_score_weighted_loss, metrics = [f_score_weighted])
-		# model.compile(optimizer = Adam(lr = 1e-4), loss = jaccard_cross_entropy_loss, metrics = [ jaccard_coef])
 		model.compile(optimizer = Adam(lr = 1e-4), loss = weighted_dice_coef_loss, metrics = [ weighted_dice_coef])
-
 		# model.compile(optimizer = Adam(lr = 1e-4), loss = mean_cross_entropy, metrics = [ 'accuracy'])
-		
+
+		# model.compile(optimizer = Adam(lr = 1e-4), loss = jaccard_cross_entropy_loss, metrics = [ jaccard_coef])		
 
 		return model
 
@@ -201,7 +200,7 @@ class myUnet(object):
 		print("loading data done")
 		# model = load_model('/extend_sda/Ananya_files/Weeding Bot Project/Codes/Keras TF/Segmentation/UNet/images_200by200/augmented/unet_trial3.hdf5') # load a trained model of unet
 
-		model = self.get_unet()
+		# model = self.get_unet()
 		print("got unet")
 
 		model_checkpoint = ModelCheckpoint('unet.hdf5', monitor='val_loss',verbose=1, save_best_only=True)
@@ -359,7 +358,7 @@ class myUnet(object):
 
 		
 		model = self.get_unet()
-		# model = load_model('/extend_sda/Ananya_files/Weeding Bot Project/Codes/Keras TF/Segmentation/UNet/images_200by200/augmented/unet_trial3.hdf5') # load a trained model of unet
+		# model = load_model('/extend_sda/Ananya_files/Weeding Bot Project/Codes/Keras TF/Segmentation/UNet/unet.hdf5') # load a trained model of unet
 		print("got unet")
 
 		model_checkpoint = ModelCheckpoint('unet.hdf5', monitor='val_loss',verbose=1, save_best_only=True)
@@ -367,12 +366,12 @@ class myUnet(object):
 		early_stopping = EarlyStopping(monitor='val_loss', min_delta = 0.0001, patience=5)
 		adjust_learning_rate = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, verbose=0, mode='auto', epsilon=0.0001, cooldown=0, min_lr=0)
 		start_time = time.time()
-		# model.fit_generator(training_generator, epochs=50, steps_per_epoch=2000, verbose=1, callbacks=[model_checkpoint], validation_data = validation_generator, validation_steps = 610 )
+		# model.fit_generator(training_generator, epochs=60, steps_per_epoch=2000, verbose=1, callbacks=[model_checkpoint], validation_data = validation_generator, validation_steps = 610 )
 		# train_steps_per_epoch = np.math.ceil(training_generator.samples / training_generator.batch_size)
 		# print(train_steps_per_epoch)
 		# print(val_steps_per_epoch)
 		# val_steps_per_epoch = np.math.ceil(validation_generator.samples / validation_generator.batch_size)
-		model.fit_generator(training_generator, epochs=50, steps_per_epoch=2000, verbose=1, callbacks=[model_checkpoint, early_stopping, adjust_learning_rate], validation_data = validation_generator, validation_steps = 610 )
+		model.fit_generator(training_generator, epochs=60, steps_per_epoch=2000, verbose=1, callbacks=[model_checkpoint, early_stopping, adjust_learning_rate], validation_data = validation_generator, validation_steps = 610 )
 		##steps are found by dividing total images by batch size; (68080/32 ~= 2127), (19536/32 ~= 610)
 		end_time = time.time()
 
@@ -476,9 +475,9 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 	total_confusion_mat = np.zeros((3,3))
 	total_confusion_mat_percent = np.zeros((3,3))
 	classwise_accuracy = np.zeros(3)
-	precision_score_class= np.zeros(3)
-	recall_score_class= np.zeros(3)
-	sensitivity= np.zeros(3)
+	precision_score= np.zeros(3)
+	recall_score= np.zeros(3)
+	sensitivity_score= np.zeros(3)
 
 	# Folders to save test images, predicted labels and their overlay
 	npy_path = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/'
@@ -590,15 +589,16 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 					sum+= match/(float)(match+wrong)
 					count+=1
 
-				classwise_accuracy+= recall_score_class(actual_label, predicted_label)
-				precision_score_class+= precision_score_class(actual_label, predicted_label)
-				recall_score_class+= recall_score_class(actual_label, predicted_label)
-				sensitivity+= sensitivity(actual_label, predicted_label)
+				classwise_accuracy+= recall_score_class(actual_label, predicted_image).eval()
+				precision_score+= precision_score_class(actual_label, predicted_image).eval()
+				recall_score+= recall_score_class(actual_label, predicted_image).eval()
+				sensitivity_score+= sensitivity(actual_label, predicted_image).eval()
 
 				filepath5 = os.path.join(npy_path, 'results_intersected/'+file_list[index]+'/'+ image_folder[iImage])
 				cv2.imwrite(filepath5, intersect_image)
 
 				confusion_mat = make_confusion_matrix(actual_label, predicted_image)
+				# print(confusion_mat.shape)
 				total_confusion_mat+= confusion_mat
 				# print(total_confusion_mat)
 
@@ -616,9 +616,9 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 	print("Confusion Matrix", total_confusion_mat)
 	print("Percentage Confusion Matrix", total_confusion_mat_percent)
 	print("Classwise accuracy", classwise_accuracy)
-	print("Precision",precision_score_class)
-	print("Recall", recall_score_class)
-	print("Sensitivity", sensitivity)
+	print("Precision",precision_score)
+	print("Recall", recall_score)
+	print("Sensitivity", sensitivity_score)
 
 
 if __name__ == '__main__':

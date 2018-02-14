@@ -62,11 +62,11 @@ def dice_coef(y_true, y_pred, smooth=0.0):
 	print(y_pred.shape)
 	print('mult shape')
 	print((y_true*y_pred).shape)
-	intersection = K.sum(y_true * y_pred, axis=[1,2])
+	intersection = K.sum(y_true * y_pred, axis=[-2,-3])
 	# intersection = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)), axis=[1,2]) # if the y values aren't between 0 and 1 already
 	print(intersection.shape)
 	print('intersection.shape')
-	summation = K.sum(y_true, axis=[1,2]) + K.sum(y_pred, axis=[1,2])
+	summation = K.sum(y_true, axis=[-2,-3]) + K.sum(y_pred, axis=[-2,-3])
 	print(summation.shape)
 
 	dice = K.mean((2.0 * intersection + smooth) / (summation + smooth))
@@ -82,17 +82,32 @@ def dice_coef_loss(y_true, y_pred):
 def weighted_dice_coef(y_true, y_pred, smooth=0.0):
 	#Average dice coefficient per batch.
 
+	# num_samples = K.sum(K.round(y_pred), axis=[1,2]) # number of samples = number of positives/ones in each layer in the true labels
+	# total_samples = K.sum(num_samples, axis=-1,keepdims=True)
+	# prop_samples=num_samples/total_samples
+	# weights = 1/prop_samples
+	# weights /= K.sum(weights)
+
+	# # Same weight for all images
+	# weights = np.array([20,1,1])
+
+	# intersection = K.sum(y_true * y_pred, axis=[-2,-3])
+	# # intersection = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)), axis=[1,2])# if the y values aren't between 0 and 1 already
+	# summation = K.sum(y_true, axis=[-2,-3]) + K.sum(y_pred, axis=[-2,-3])
+
+	# dice = K.mean((2.0 * intersection*weights + smooth) / (summation*weights + smooth))
+
+	# Weighted by number of instances in each image
 	num_samples = K.sum(K.round(y_pred), axis=[1,2]) # number of samples = number of positives/ones in each layer in the true labels
 	total_samples = K.sum(num_samples, axis=-1,keepdims=True)
-	prop_samples=num_samples/total_samples
-	weights = 1/prop_samples
-	# weights /= sum(weights)
+	intersection = K.sum(y_true * y_pred, axis=[-2,-3])
+	# weights = num_samples/total_samples
+	weights=np.array([10,1,1])
+	intersection_weighted = K.sum(intersection*weights)
+	summation = K.sum(y_true, axis=[-2,-3]) + K.sum(y_pred, axis=[-2,-3])
+	summation_weighted = K.sum(summation*weights)
+	dice = K.mean((2.0 * intersection + smooth) / (summation+ smooth))
 
-	intersection = K.sum(y_true * y_pred, axis=[1,2])
-	# intersection = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)), axis=[1,2])# if the y values aren't between 0 and 1 already
-	summation = K.sum(y_true, axis=[1,2]) + K.sum(y_pred, axis=[1,2])
-
-	dice = K.mean((2.0 * intersection*weights + smooth) / (summation*weights + smooth))
 
 	return dice 
 
@@ -101,8 +116,8 @@ def weighted_dice_coef_loss(y_true, y_pred):
 
 def jaccard_coef(y_true, y_pred, smooth=0.0):
 	#Average jaccard coefficient per batch.
-	intersection = K.sum(y_true * y_pred, axis=[1,2])
-	union = K.sum(y_true, axis=[1,2]) + K.sum(y_pred, axis=[1,2]) - intersection
+	intersection = K.sum(y_true * y_pred, axis=[-2,-3])
+	union = K.sum(y_true, axis=[-2,-3]) + K.sum(y_pred, axis=[-2,-3]) - intersection
 	return K.mean( (intersection + smooth) / (union + smooth))
 
 def jaccard_coef_loss(y_true, y_pred):
@@ -187,10 +202,10 @@ def mean_cross_entropy(y_true, y_pred):
 	model.compile(loss=loss,optimizer='adam')
 	"""
 	# weight order: weeds, background, plants
-	weights = np.array([20,1,1])
+	# weights = np.array([20,1,1])
 
-	print('weight shape')
-	print(weights.shape)
+	# print('weight shape')
+	# print(weights.shape)
 	# num_samples = K.sum(y_pred, axis=[1,2]) # number of samples = number of positives/ones in each layer in the true labels
 	# print(num_samples)
 # 	print('num sampels')
@@ -200,53 +215,100 @@ def mean_cross_entropy(y_true, y_pred):
 # 	print(total_samples.shape)
 # 	prop_samples=num_samples/total_samples
 # 	weights = 1/prop_samples
-	weights = K.variable(weights)
+	# weights = K.variable(weights)
 
 	# scale predictions so that the class probas of each sample sum to 1
 	y_pred /= K.sum(y_pred, axis=-1, keepdims=True)
 	# clip to prevent NaN's and Inf's
 	y_pred = K.clip(y_pred, K.epsilon(), 1 - K.epsilon())
 	# calc
+	# # Same weight for all images
+	# loss = y_true * K.log(y_pred) * weights
+	# loss = -K.sum(loss, -1)
+
+	# Weighted individually by number of instances
+	num_samples = K.sum(y_pred, axis=[1,2]) # number of samples = number of positives/ones in each layer in the true labels
+	# print(num_samples)
+	# print('num sampels')
+	# print(num_samples.shape)
+	total_samples = K.sum(num_samples, axis=-1,keepdims=True)
+	# weights = num_samples/total_samples
+	weights = np.array([10,1,1])
 	loss = y_true * K.log(y_pred) * weights
-	loss = -K.sum(loss, -1)
+	loss = -K.sum(loss, -1)	
+
+
+
 	return loss
 
 
 def f_score_weighted(y_true, y_pred):
 	precision = precision_score_class(y_true, y_pred)
+	# print(precision.shape)
 	recall = recall_score_class(y_true, y_pred)
 
-	num_samples = K.sum(K.round(y_pred), axis=[1,2]) # number of samples = number of positives/ones in each layer in the true labels
+	# num_samples = K.sum(K.round(y_pred), axis=[-2,-3]) # number of samples = number of positives/ones in each layer in the true labels
+	# # print(num_samples.shape)
+	# total_samples = K.sum(num_samples, axis=-1,keepdims=True)
+	# prop_samples=num_samples/total_samples
+	# weights = 1/prop_samples
+	# # print(weights.shape)
+	# weights /= K.sum(weights)	
+	# # weights = np.array([20,1,1])
+
+	# precision_weighted = precision*weights
+	# precision_weighted/=K.sum(precision_weighted)
+	# precision_weighted = K.clip(precision_weighted, K.epsilon(), 1 - K.epsilon())
+	# # print(precision_weighted.shape)
+	# recall_weighted = recall*weights
+	# recall_weighted /= K.sum(recall_weighted)
+	# recall_weighted = K.clip(recall_weighted, K.epsilon(), 1 - K.epsilon())
+
+	# f1_score = 2*(precision_weighted*recall_weighted)/(precision_weighted+recall_weighted)
+	# # print(f1_score.shape)
+
+	# weighted by number of instances
+	num_samples = K.sum(y_pred, axis=[-2,-3]) # number of samples = number of positives/ones in each layer in the true labels
 	total_samples = K.sum(num_samples, axis=-1,keepdims=True)
-	prop_samples=num_samples/total_samples
-	weights = 1/prop_samples
-	# weights /= sum(weights)	
+	# weights=num_samples/total_samples
+	weights = np.array([10,1,1])
 
-	precision_weighted = precision*weights
-	recall_weighted = recall*weights
+	f1_score = 2*(precision*recall)/(precision+recall) # this value is blowing up; why??
+	# print(f1_score.shape)
+	f1_score_weighted = K.sum(f1_score*weights) # weighted f1 score
+	# print('f1score')
+	# print(f1_score_weighted.shape)
 
-	f1_score = 2*precision_weighted*recall_weighted/(precision_weighted+recall_weighted)
 	
-	return f1_score
+	return f1_score_weighted
 
 def f_score_weighted_loss(y_true, y_pred):
 	return -f_score_weighted(y_true, y_pred)
 
 def precision_score_class(y_true, y_pred):
 
-	true_positives = K.sum(K.round(y_true * y_pred), axis=[1,2])
-	predicted_positives = K.sum(K.round(y_pred), axis=[1,2])
-
+	# true_positives = K.sum(K.round(y_true * y_pred), axis=[1,2])
+	# predicted_positives = K.sum(K.round(y_pred), axis=[1,2])
+	true_positives = K.sum((y_true * y_pred), axis=[-2,-3])
+	predicted_positives = K.sum(y_pred, axis=[-2,-3])
 	precision = true_positives/predicted_positives
 
 	return precision
 
 def recall_score_class(y_true, y_pred):
-	true_positives = K.sum(K.round(y_true * y_pred), axis=[1,2])
-	predicted_positives = K.sum(K.round(y_pred), axis=[1,2])
-	possible_positives =K.sum(K.round(y_true), axis=[1,2])
+	# true_positives = K.sum(K.round(y_true * y_pred), axis=[1,2])
+	# predicted_positives = K.sum(K.round(y_pred), axis=[1,2])
+	# possible_positives =K.sum(K.round(y_true), axis=[1,2])
 
+	# if y_true.shape[-1] == 
+	# print(y_pred.shape[-2])
+	# print(y_pred.shape[-3])
+	true_positives = K.sum((y_true * y_pred), axis=[-2,-3])
+	predicted_positives = K.sum(y_pred, axis=[-2,-3])
+	possible_positives =K.sum(y_true, axis=[-2,-3])
 	recall = predicted_positives/possible_positives
+	# print('recall shape')
+	# print(recall.shape)
 
 	return recall
 
