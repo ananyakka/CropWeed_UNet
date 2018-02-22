@@ -30,7 +30,7 @@ import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 from sklearn.utils.class_weight import compute_class_weight, compute_sample_weight
 from sklearn.metrics import f1_score
-from train_params import f_score_weighted_loss, f_score_weighted, weighted_dice_coef_loss, weighted_dice_coef
+from train_params import f_score_weighted_loss, f_score_weighted , weighted_dice_coef_loss, weighted_dice_coef
 # import keras.backend.tensorflow_backend
 
 from data_generator import my_generator #my_generator(filepath, labelpath, x_set_indices, batch_size)
@@ -148,11 +148,12 @@ class myUnet(object):
 		# print(out_flatten.get_shape())
 
 		model = Model(input = inputs, output =out)
+		print('Model Summary')
 		model.summary()
 
 		# model.compile(optimizer = Adam(lr = 1e-4), loss = f_score_weighted_loss, metrics = [f_score_weighted])
-		model.compile(optimizer = Adam(lr = 1e-4), loss = weighted_dice_coef_loss, metrics = [ weighted_dice_coef])
-		# model.compile(optimizer = Adam(lr = 1e-4), loss = mean_cross_entropy, metrics = [ 'accuracy'])
+		# model.compile(optimizer = Adam(lr = 1e-4), loss = weighted_dice_coef_loss, metrics = [ weighted_dice_coef])
+		model.compile(optimizer = Adam(lr = 1e-4), loss = mean_cross_entropy, metrics = [ 'accuracy'])
 
 		# model.compile(optimizer = Adam(lr = 1e-4), loss = jaccard_cross_entropy_loss, metrics = [ jaccard_coef])		
 
@@ -474,10 +475,11 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 	count = 0
 	total_confusion_mat = np.zeros((3,3))
 	total_confusion_mat_percent = np.zeros((3,3))
-	classwise_accuracy = np.zeros(3)
+	predicted_label_array_big = np.empty([0, rows,cols,3])
+	# classwise_accuracy = np.zeros(3)
 	precision_score= np.zeros(3)
 	recall_score= np.zeros(3)
-	sensitivity_score= np.zeros(3)
+	# sensitivity_score= np.zeros(3)
 
 	# Folders to save test images, predicted labels and their overlay
 	npy_path = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/'
@@ -498,6 +500,7 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 		batch_start = 0
 		batch_end = batch_size
 		folder_total = len(image_folder)
+		predicted_label_array = np.ndarray((len(image_folder), rows,cols,3), dtype=np.float32)
 
 		if not os.path.exists(os.path.join(npy_path, 'results/'+file_list[index]+ '/')):
 			os.makedirs(os.path.join(npy_path, 'results/'+file_list[index]+ '/'))
@@ -533,6 +536,7 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 				cv2.imwrite(filepath2, test_img)
 
 				predicted_label = model.predict(test_img_exp)
+				predicted_label_array[iImage] = predicted_label
 				# print(predicted_label[0].shape)
 				# predicted_label = array_to_img(predicted_label)
 				predicted_label = array_to_img(predicted_label[0])
@@ -589,10 +593,12 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 					sum+= match/(float)(match+wrong)
 					count+=1
 
-				classwise_accuracy+= recall_score_class(actual_label, predicted_image).eval()
-				precision_score+= precision_score_class(actual_label, predicted_image).eval()
-				recall_score+= recall_score_class(actual_label, predicted_image).eval()
-				sensitivity_score+= sensitivity(actual_label, predicted_image).eval()
+				# classwise_accuracy+= recall_score_class(actual_label, predicted_image).eval(session=sess)
+				# precision_score+= precision_score_class(actual_label, predicted_image).eval(session=sess)
+				precision_score+= precision_score_class(actual_label, predicted_image).eval(session=sess)
+				# recall_score+= recall_score_class(actual_label, predicted_image).eval(session=sess)
+				recall_score+= recall_score_class(actual_label, predicted_image).eval(session=sess)
+				# sensitivity_score+= sensitivity(actual_label, predicted_image).eval(session=sess)
 
 				filepath5 = os.path.join(npy_path, 'results_intersected/'+file_list[index]+'/'+ image_folder[iImage])
 				cv2.imwrite(filepath5, intersect_image)
@@ -606,20 +612,23 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 				i+=1
 			batch_start += batch_size
 			batch_end += batch_size
+			np.append(predicted_label_array_big, predicted_label_array, axis=0)
 
 	for iRow in range(total_confusion_mat.shape[0]):
-		total_confusion_mat_percent[iRow, :] = total_confusion_mat[iRow, :]/ np.sum(total_confusion_mat[iRow, :])
+		total_confusion_mat_percent[iRow, :] = total_confusion_mat[iRow, :]/ np.sum(total_confusion_mat[iRow, :]) # divide each row by total number of 
+		#pixels in that row
 
-
+	
 	# print(count)
 	print ("Percentage: ", sum/(float)(count))
 	print("Confusion Matrix", total_confusion_mat)
 	print("Percentage Confusion Matrix", total_confusion_mat_percent)
-	print("Classwise accuracy", classwise_accuracy)
-	print("Precision",precision_score)
-	print("Recall", recall_score)
-	print("Sensitivity", sensitivity_score)
-
+	# print("Classwise accuracy", classwise_accuracy)
+	print("Precision",precision_score/(float)(count))
+	print("Recall", recall_score/(float)(count))
+	# print("Sensitivity", sensitivity_score)
+	filepath6 =  os.path.join(npy_path, 'imgs_predicted_mask_test.npy')
+	np.save(filepath6, predicted_label_array_big)
 
 if __name__ == '__main__':
 

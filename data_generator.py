@@ -13,7 +13,6 @@ import PIL
 from PIL import Image
 from numpy import array
 from glob import glob
-import numpy as np
 import math
 import random
 from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img

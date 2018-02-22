@@ -19,7 +19,7 @@ from keras.layers import multiply
 
 from sklearn.metrics import f1_score
 import numpy as np
-
+import tensorflow as tf
 
 
 
@@ -82,11 +82,13 @@ def dice_coef_loss(y_true, y_pred):
 def weighted_dice_coef(y_true, y_pred, smooth=0.0):
 	#Average dice coefficient per batch.
 
-	# num_samples = K.sum(K.round(y_pred), axis=[1,2]) # number of samples = number of positives/ones in each layer in the true labels
-	# total_samples = K.sum(num_samples, axis=-1,keepdims=True)
-	# prop_samples=num_samples/total_samples
+	num_samples = K.sum(K.round(y_true), axis=[-2,-3]) # number of samples = number of positives/ones in each layer in the true labels
+	total_samples = K.sum(num_samples, axis=-1,keepdims=True)
+	prop_samples=num_samples/total_samples
+	print(prop_samples.shape)
 	# weights = 1/prop_samples
 	# weights /= K.sum(weights)
+	weights = 1.0 - prop_samples
 
 	# # Same weight for all images
 	# weights = np.array([20,1,1])
@@ -98,11 +100,11 @@ def weighted_dice_coef(y_true, y_pred, smooth=0.0):
 	# dice = K.mean((2.0 * intersection*weights + smooth) / (summation*weights + smooth))
 
 	# Weighted by number of instances in each image
-	num_samples = K.sum(K.round(y_pred), axis=[1,2]) # number of samples = number of positives/ones in each layer in the true labels
-	total_samples = K.sum(num_samples, axis=-1,keepdims=True)
+	# num_samples = K.sum(K.round(y_pred), axis=[1,2]) # number of samples = number of positives/ones in each layer in the true labels
+	# total_samples = K.sum(num_samples, axis=-1,keepdims=True)
 	intersection = K.sum(y_true * y_pred, axis=[-2,-3])
 	# weights = num_samples/total_samples
-	weights=np.array([10,1,1])
+	# weights=np.array([10,1,1])
 	intersection_weighted = K.sum(intersection*weights)
 	summation = K.sum(y_true, axis=[-2,-3]) + K.sum(y_pred, axis=[-2,-3])
 	summation_weighted = K.sum(summation*weights)
@@ -227,19 +229,30 @@ def mean_cross_entropy(y_true, y_pred):
 	# loss = -K.sum(loss, -1)
 
 	# Weighted individually by number of instances
-	num_samples = K.sum(y_pred, axis=[1,2]) # number of samples = number of positives/ones in each layer in the true labels
+	num_samples = K.sum(y_pred, axis=[-2,-3]) # number of samples = number of positives/ones in each layer in the true labels
 	# print(num_samples)
 	# print('num sampels')
 	# print(num_samples.shape)
 	total_samples = K.sum(num_samples, axis=-1,keepdims=True)
-	# weights = num_samples/total_samples
-	weights = np.array([10,1,1])
-	loss = y_true * K.log(y_pred) * weights
-	loss = -K.sum(loss, -1)	
+	prop_samples = num_samples/total_samples
+	weights = 1.0 - prop_samples
+	# weights= K.ones([y_pred.shape[-3], y_pred.shape[-2], y_pred.shape[-1]])
+	# weights = np.array([10,1,1])
+	print(y_pred.shape)
+	batch_size = 32
+	loss = []
+	for iImage in range(batch_size):
+		loss_temp = y_true[iImage, :,:,:] * K.log(y_pred[iImage, :,:,:])*weights[iImage,:]
+		loss_sum = -K.mean(loss_temp, -1)
+		loss.append(loss_sum)
+	# loss = -K.sum(loss, -1)
+	loss = K.stack(loss)	
 
 
 
 	return loss
+
+
 
 
 def f_score_weighted(y_true, y_pred):
@@ -268,19 +281,28 @@ def f_score_weighted(y_true, y_pred):
 	# # print(f1_score.shape)
 
 	# weighted by number of instances
-	num_samples = K.sum(y_pred, axis=[-2,-3]) # number of samples = number of positives/ones in each layer in the true labels
+	num_samples = K.sum(y_true, axis=[-2,-3]) # number of samples = number of positives/ones in each layer in the true labels
+	print(num_samples)
 	total_samples = K.sum(num_samples, axis=-1,keepdims=True)
+	print(total_samples)
+	prop_samples=num_samples/total_samples
+	print(prop_samples)
 	# weights=num_samples/total_samples
-	weights = np.array([10,1,1])
+	weights = np.array([0.8,0.1,0.1])
+	# weights = 1 - prop_samples
+	precision_weighted = precision*weights
+	recall_weighted =recall*weights
 
-	f1_score = 2*(precision*recall)/(precision+recall) # this value is blowing up; why??
+	f1_score = 2*(precision_weighted*recall_weighted)/(precision_weighted+recall_weighted) # this value is blowing up; why??
+	# f1_score = recall_weighted
 	# print(f1_score.shape)
-	f1_score_weighted = K.sum(f1_score*weights) # weighted f1 score
-	# print('f1score')
+	f1_score_weighted = K.mean(f1_score, axis=-1) # weighted f1 score
+	# print(f1_score_weighted)
 	# print(f1_score_weighted.shape)
-
+	# a = np.array([1,2,3])
 	
 	return f1_score_weighted
+
 
 def f_score_weighted_loss(y_true, y_pred):
 	return -f_score_weighted(y_true, y_pred)
