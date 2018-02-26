@@ -219,34 +219,51 @@ def mean_cross_entropy(y_true, y_pred):
 # 	weights = 1/prop_samples
 	# weights = K.variable(weights)
 
-	# scale predictions so that the class probas of each sample sum to 1
-	y_pred /= K.sum(y_pred, axis=-1, keepdims=True)
-	# clip to prevent NaN's and Inf's
-	y_pred = K.clip(y_pred, K.epsilon(), 1 - K.epsilon())
-	# calc
-	# # Same weight for all images
-	# loss = y_true * K.log(y_pred) * weights
-	# loss = -K.sum(loss, -1)
+	if len(K.int_shape(y_pred))== 4:
+		# scale predictions so that the class probas of each sample sum to 1
+		y_pred /= K.sum(y_pred, axis=-1, keepdims=True)
+		# clip to prevent NaN's and Inf's
+		y_pred = K.clip(y_pred, K.epsilon(), 1 - K.epsilon())
+		# calc
+		# # Same weight for all images
+		# loss = y_true * K.log(y_pred) * weights
+		# loss = -K.sum(loss, -1)
 
-	# Weighted individually by number of instances
-	num_samples = K.sum(y_pred, axis=[-2,-3]) # number of samples = number of positives/ones in each layer in the true labels
-	# print(num_samples)
-	# print('num sampels')
-	# print(num_samples.shape)
-	total_samples = K.sum(num_samples, axis=-1,keepdims=True)
-	prop_samples = num_samples/total_samples
-	weights = 1.0 - prop_samples
-	# weights= K.ones([y_pred.shape[-3], y_pred.shape[-2], y_pred.shape[-1]])
-	# weights = np.array([10,1,1])
-	print(y_pred.shape)
-	batch_size = 32
-	loss = []
-	for iImage in range(batch_size):
-		loss_temp = y_true[iImage, :,:,:] * K.log(y_pred[iImage, :,:,:])*weights[iImage,:]
-		loss_sum = -K.mean(loss_temp, -1)
-		loss.append(loss_sum)
-	# loss = -K.sum(loss, -1)
-	loss = K.stack(loss)	
+		# Weighted individually by number of instances
+		num_samples = K.sum(y_true, axis=[-2,-3]) # number of samples = number of positives/ones in each layer in the true labels
+		# print(num_samples)
+		# print('num sampels')
+		# print(num_samples.shape)
+		total_samples = K.sum(num_samples, axis=-1,keepdims=True)
+		prop_samples = num_samples/total_samples
+		weights = 1.0 - prop_samples
+		# weights= K.ones([y_pred.shape[-3], y_pred.shape[-2], y_pred.shape[-1]])
+		# weights = np.array([10,1,1])
+		print(y_pred.shape)
+		batch_size = 32
+		loss = []
+		for iImage in range(batch_size):
+			loss_temp = y_true[iImage, :,:,:] * K.log(y_pred[iImage, :,:,:])*weights[iImage,:]
+			loss_sum = -K.mean(loss_temp, -1)
+			loss.append(loss_sum)
+		# loss = -K.sum(loss, -1)
+		loss = K.stack(loss)	
+	elif len(K.int_shape(y_pred))== 3:
+		# scale predictions so that the class probas of each sample sum to 1
+		y_pred /= K.sum(y_pred, axis=-1, keepdims=True)
+		# clip to prevent NaN's and Inf's
+		y_pred = K.clip(y_pred, K.epsilon(), 1 - K.epsilon())
+
+		# Weighted individually by number of instances
+		num_samples = K.sum(y_true, axis=[-2,-3]) # number of samples = number of positives/ones in each layer in the true labels
+
+		total_samples = K.sum(num_samples, axis=-1,keepdims=True)
+		prop_samples = num_samples/total_samples
+		weights = 1.0 - prop_samples
+
+		loss_temp = y_true * K.log(y_pred)*weights
+		loss = -K.mean(loss_temp, -1)
+
 
 
 

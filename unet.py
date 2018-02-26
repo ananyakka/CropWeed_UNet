@@ -359,7 +359,7 @@ class myUnet(object):
 
 		
 		model = self.get_unet()
-		# model = load_model('/extend_sda/Ananya_files/Weeding Bot Project/Codes/Keras TF/Segmentation/UNet/unet.hdf5') # load a trained model of unet
+		# model = load_model('/extend_sda/Ananya_files/Weeding Bot Project/Codes/Keras TF/Segmentation/UNet/images_200by200/augmented/unet_trial15.hdf5') # load a trained model of unet
 		print("got unet")
 
 		model_checkpoint = ModelCheckpoint('unet.hdf5', monitor='val_loss',verbose=1, save_best_only=True)
@@ -476,9 +476,10 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 	total_confusion_mat = np.zeros((3,3))
 	total_confusion_mat_percent = np.zeros((3,3))
 	predicted_label_array_big = np.empty([0, rows,cols,3])
+	actual_label_array_big = np.empty([0, rows,cols,3])
 	# classwise_accuracy = np.zeros(3)
-	precision_score= np.zeros(3)
-	recall_score= np.zeros(3)
+	# precision_score= np.zeros(3)
+	# recall_score= np.zeros(3)
 	# sensitivity_score= np.zeros(3)
 
 	# Folders to save test images, predicted labels and their overlay
@@ -501,6 +502,7 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 		batch_end = batch_size
 		folder_total = len(image_folder)
 		predicted_label_array = np.ndarray((len(image_folder), rows,cols,3), dtype=np.float32)
+		actual_label_array = np.ndarray((len(image_folder), rows,cols,3), dtype=np.float32)
 
 		if not os.path.exists(os.path.join(npy_path, 'results/'+file_list[index]+ '/')):
 			os.makedirs(os.path.join(npy_path, 'results/'+file_list[index]+ '/'))
@@ -511,10 +513,11 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 		if not os.path.exists(os.path.join(npy_path, 'results_intersected/'+file_list[index]+ '/')):
 			os.makedirs(os.path.join(npy_path, 'results_intersected/'+file_list[index]+ '/'))
 
-		while batch_end< folder_total:
+		j=0 
+		while batch_end< folder_total: #always ignores the last few in each; fix this
 
 			limit = min(batch_end, folder_total)
-			list_images = range(batch_start,batch_end)
+			list_images = range(batch_start,limit)
 
 			i=0
 
@@ -536,7 +539,7 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 				cv2.imwrite(filepath2, test_img)
 
 				predicted_label = model.predict(test_img_exp)
-				predicted_label_array[iImage] = predicted_label
+				predicted_label_array[j] = predicted_label
 				# print(predicted_label[0].shape)
 				# predicted_label = array_to_img(predicted_label)
 				predicted_label = array_to_img(predicted_label[0])
@@ -564,6 +567,7 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 				# to compare predicted label and actual label, and display red for wrong prediction and blue for correct predictions, pixel-wise
 				filepath4 = os.path.join(labelpath, label_list[index]+'/'+ label_folder[iImage])
 				actual_label = cv2.imread(filepath4)
+				actual_label_array[j] = actual_label
 
 				red = np.array([255, 0, 0])
 				blue =np.array([0, 0, 255])
@@ -595,9 +599,9 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 
 				# classwise_accuracy+= recall_score_class(actual_label, predicted_image).eval(session=sess)
 				# precision_score+= precision_score_class(actual_label, predicted_image).eval(session=sess)
-				precision_score+= precision_score_class(actual_label, predicted_image).eval(session=sess)
+				# precision_score+= precision_score_class(actual_label, predicted_image).eval(session=sess)
 				# recall_score+= recall_score_class(actual_label, predicted_image).eval(session=sess)
-				recall_score+= recall_score_class(actual_label, predicted_image).eval(session=sess)
+				# recall_score+= recall_score_class(actual_label, predicted_image).eval(session=sess)
 				# sensitivity_score+= sensitivity(actual_label, predicted_image).eval(session=sess)
 
 				filepath5 = os.path.join(npy_path, 'results_intersected/'+file_list[index]+'/'+ image_folder[iImage])
@@ -610,9 +614,12 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 
 
 				i+=1
+				j+=1
 			batch_start += batch_size
 			batch_end += batch_size
-			np.append(predicted_label_array_big, predicted_label_array, axis=0)
+
+		predicted_label_array_big=np.append(predicted_label_array_big, predicted_label_array, axis=0)
+		actual_label_array_big=np.append(actual_label_array_big, actual_label_array, axis=0)
 
 	for iRow in range(total_confusion_mat.shape[0]):
 		total_confusion_mat_percent[iRow, :] = total_confusion_mat[iRow, :]/ np.sum(total_confusion_mat[iRow, :]) # divide each row by total number of 
@@ -624,11 +631,13 @@ def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
 	print("Confusion Matrix", total_confusion_mat)
 	print("Percentage Confusion Matrix", total_confusion_mat_percent)
 	# print("Classwise accuracy", classwise_accuracy)
-	print("Precision",precision_score/(float)(count))
-	print("Recall", recall_score/(float)(count))
+	# print("Precision",precision_score/(float)(count))
+	# print("Recall", recall_score/(float)(count))
 	# print("Sensitivity", sensitivity_score)
 	filepath6 =  os.path.join(npy_path, 'imgs_predicted_mask_test.npy')
 	np.save(filepath6, predicted_label_array_big)
+	filepath6 =  os.path.join(npy_path, 'imgs_true_mask_test.npy')
+	np.save(filepath6, actual_label_array_big)
 
 if __name__ == '__main__':
 
