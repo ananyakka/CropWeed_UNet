@@ -8,13 +8,7 @@ import math
 from keras.preprocessing.image import *
 from pathlib import Path
 import glob
-# from keras.preprocessing.image import ImageDataGenerator
 
-# import Augmentor
-"""
-
-
-"""
 def rotatedRectWithMaxArea(w, h, angle):
 	"""
 	Credit : https://stackoverflow.com/a/16778797
@@ -231,56 +225,6 @@ def random_erasing(image, rectangle_area):
 
 # 			img_shifted_negative = img[y1:y2, x1:x2, :]
 
-##-------
-
-# img = cv2.imread('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/Labelled Photos/newIMG_1394.png')
-
-# angle = 60
-# rows,cols, channels = img.shape
-
-# img2 = rotate_max_area(img, angle)
-
-# M = cv2.getRotationMatrix2D((cols/2, rows/2), angle, 1)
-# rotated_image = cv2.warpAffine(img, M, (cols, rows))
-
-# cv2.imshow('original image', img)
-# cv2.imshow('biggest rotated image', img2)
-# cv2.imshow('basic rotated image', rotated_image)
-
-# fullnewfilename = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/"+'newIMG_1394_original.png'
-# cv2.imwrite(fullnewfilename, img)
-
-# fullnewfilename = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/"+'newIMG_1394_biggest_rotated.png'
-# cv2.imwrite(fullnewfilename, img2)
-
-# fullnewfilename = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/"+'newIMG_1394_rotated.png'
-# cv2.imwrite(fullnewfilename, rotated_image)
-
-# resized_image = cv2.resize(img, (image_size, image_size), interpolation=cv2.INTER_NEAREST) 
-
-
-
-## Flip Image ( Horizontal flip, Vertical Flip)
-
-# data_gen_args = dict(horizontal_flip=True, vertical_flip=True)
-
-# image_datagen = ImageDataGenerator(**data_gen_args)
-# mask_datagen = ImageDataGenerator(**data_gen_args)
-
-
-# for images in image_datagen.flow_from_directory(image_directory, target_size=(row_size, col_size), batch_size=2 , seed = seed, save_to_dir = aug_image_directory):
-# 	for i in range(0, batch_size):
-# 		aug_img = images[i]
-# 		fullnewfilename = "/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/"+'newIMG_1394_rotated.png'
-# 		cv2.imwrite(fullnewfilename, aug_img)
-							   
-
-# # Add noise to the image
-# salt_pepper_noise_imgs = add_salt_pepper_noise(X_imgs)
-# # Change lighting condition
-# gaussian_noise_imgs = add_gaussian_noise(X_imgs)
-# Perspective transform
-# perspective_img = perspective_transform(X_img) # need to know the position of object 
 
 # Shear image
 # random_shear(image, shear_angle) # have to add artificial pixel to points outside boundary

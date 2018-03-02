@@ -30,7 +30,7 @@ for index in x_set_indices:
 	folder_total = len(image_folder)
 	actual_label_array = np.ndarray((len(image_folder), rows,cols,3), dtype=np.float32)
 
-	j=0 
+	iAll_images=0 
 	while batch_end< folder_total: #always ignores the last few in each; fix this
 
 		limit = min(batch_end, folder_total)
@@ -38,12 +38,12 @@ for index in x_set_indices:
 
 		for iImage in list_images:
 			
-			filepath4 = os.path.join(labelpath, label_list[index]+'/'+ label_folder[iImage])
-			actual_label = cv2.imread(filepath4)
-			actual_label_array[j] = actual_label
+			label_image_path = os.path.join(labelpath, label_list[index]+'/'+ label_folder[iImage])
+			actual_label = cv2.imread(label_image_path)
+			actual_label_array[iAll_images] = actual_label
 
-			j+=1
-			# print(j)
+			iAll_images+=1
+			# print(iAll_images)
 		batch_start += batch_size
 		batch_end += batch_size
 	print('appending')
@@ -51,6 +51,6 @@ for index in x_set_indices:
 	print(actual_label_array.shape)
 	print(actual_label_array_big.shape)
 
-filepath6 =  os.path.join(npy_path, 'imgs_true_mask_test.npy')
-np.save(filepath6, actual_label_array_big)
+true_mask_np_path =  os.path.join(npy_path, 'imgs_true_mask_test.npy')
+np.save(true_mask_np_path, actual_label_array_big)
 print(actual_label_array_big.shape)
