@@ -78,3 +78,27 @@ def make_confusion_matrix(actual_label, predicted_label):
 					predicted_label_flat[i_flat] = 3
 
 	return confusion_matrix(actual_label_flat, predicted_label_flat)
+
+def make_grayscale_map(predicted_label):
+	'''
+	Takes in the actual label and predicted label, finds the highest probability and stores. 
+	Returns a grayscale image of the intensities(probabilities)
+	Input: 	predicted_label, array of shape (rows, cols, classes)
+	Output: grayscale image, array of shape (rows, cols)
+	'''
+
+	predicted_label_grayscale = np.ndarray((predicted_label.shape[0], predicted_label.shape[1]), dtype=np.float32)
+
+	for iPixel in range(predicted_label.shape[0]):
+		for jPixel in range(predicted_label.shape[1]):
+			predicted_pixel = predicted_label[iPixel,jPixel]
+
+			if predicted_pixel.argmax(axis=-1) == 0:
+				predicted_label_grayscale[iPixel,jPixel] = predicted_label[iPixel,jPixel, 0]
+			elif predicted_pixel.argmax(axis=-1) == 1:
+				predicted_label_grayscale[iPixel,jPixel] = predicted_label[iPixel,jPixel, 1]
+			elif predicted_pixel.argmax(axis=-1) == 2:
+				predicted_label_grayscale[iPixel,jPixel] = predicted_label[iPixel,jPixel, 2]
+
+	return predicted_label_grayscale
+

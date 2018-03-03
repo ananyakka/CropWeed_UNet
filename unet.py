@@ -22,6 +22,7 @@ import cv2
 import tensorflow as tf
 import random as rn
 import time
+from utils import *
 from sklearn.model_selection import StratifiedKFold, KFold
 from make_confusion_matrix import make_confusion_matrix
 from sklearn.utils.class_weight import compute_class_weight, compute_sample_weight
@@ -322,7 +323,7 @@ class myUnet(object):
 		batch_size = 1
 
 		sum = 0
-		image_count = 0
+		total_image_count = 0
 		total_confusion_mat = np.zeros((classes,classes))
 		total_confusion_mat_percent = np.zeros((classes,classes))
 		predicted_label_array_big = np.empty([0, rows,cols,classes])
@@ -361,6 +362,12 @@ class myUnet(object):
 			results_intersected_path = os.path.join(npy_path, 'results_intersected/'+file_list[index]+ '/')
 			if not os.path.exists(results_intersected_path):
 				os.makedirs(results_intersected_path)
+			results_intensity_map_path = os.path.join(npy_path, 'results_intensity/'+file_list[index]+ '/')
+			if not os.path.exists(results_intensity_map_path):
+				os.makedirs(results_intensity_map_path)
+			results_jetIntensity_map_path = os.path.join(npy_path, 'results_jetIntensity/'+file_list[index]+ '/')
+			if not os.path.exists(results_jetIntensity_map_path):
+				os.makedirs(results_jetIntensity_map_path)
 
 			iAll_images_per_index=0 
 			while batch_end< folder_total: #always ignores the last few in each; fix this
@@ -373,27 +380,43 @@ class myUnet(object):
 					match = 0
 					wrong = 0
 
-					
+					## Save the test image					
 					# test_img = load_img(os.path.join(filepath, file_list[index])+'/'+ image_folder[iImage], grayscale = False)
 					current_image_path = os.path.join(filepath, file_list[index]+'/'+ image_folder[iImage])
 					test_img = cv2.imread(current_image_path)
 					test_img_exp=np.expand_dims(test_img, axis=0) #expand to make it 4D array for prediction
-
 					image_save_path = os.path.join(results_test_images_path, image_folder[iImage])
 					# print(file_list[index])
 					# print(image_folder[iImage])
 					cv2.imwrite(image_save_path, test_img)
 
+					## Predict on test data
 					predicted_label = model.predict(test_img_exp)
+
+					## Save the prediction array
 					predicted_label_array[iAll_images_per_index] = predicted_label
 					print(predicted_label.shape)
 
+					## Save the test label
 					print(predicted_label[0].shape)
 					# predicted_label = array_to_img(predicted_label)
 					predicted_label = array_to_img(predicted_label[0])					
 					predicted_label_path = os.path.join(results_path, image_folder[iImage])
 					predicted_label.save(predicted_label_path)
 
+					## Save the prediction intensities
+					predicted_label_grayscale = make_grayscale_map(predicted_label)
+					predicted_label_grayscale = array_to_img(predicted_label_grayscale)
+					intensity_map_path = os.path.join(results_intensity_map_path, image_folder[iImage])
+					cv2.imwrite(intensity_map_path, predicted_label_grayscale)
+
+					## Save the prediction intensities in jet color map
+					predicted_label_jet = cv2.applyColorMap(predicted_label_grayscale,cv2.COLORMAP_JET)
+					predicted_label_jet = array_to_img(predicted_label_jet)
+					jet_intensity_map_path = os.path.join(results_jetIntensity_map_path, image_folder[iImage])
+					cv2.imwrite(jet_intensity_map_path, predicted_label_jet)
+
+					## Overlay predicted label on image
 					predicted_image = cv2.imread(path)
 					# print(type(predicted_image))
 					# print(predicted_image.shape)
@@ -402,18 +425,24 @@ class myUnet(object):
 					combined_image = cv2.addWeighted(predicted_image, 0.4, test_img, 0.6, 0)
 					overlay_path = os.path.join(results_combined_path, image_folder[iImage])
 					cv2.imwrite(overlay_path, combined_image)
-					
-					# to compare predicted label and actual label, and display red for wrong prediction and blue for correct predictions, pixel-wise
+
+					## to compare predicted label and actual label, and display red for wrong prediction and blue for correct predictions, pixel-wise
 					actual_label_path = os.path.join(labelpath, label_list[index]+'/'+ label_folder[iImage])
 					actual_label = cv2.imread(actual_label_path)
 					actual_label_array[iAll_images_per_index] = actual_label
 
-
-					# print (match/(float)(match+wrong))
+					## Save the image with red for wrong prediction and blue for correct predictions
 					intersect_image, match, wrong = compare_image(actual_label, predicted_image)
-					sum+= match/(float)(match+wrong)
-					image_count+=1
+ 					intersect_image_path = os.path.join(results_intersected_path, image_folder[iImage])
+					cv2.imwrite(intersect_image_path, intersect_image)
 
+					## Find the confusion matrix and add it up for every image
+					confusion_mat = make_confusion_matrix(actual_label, predicted_image)
+					# print(confusion_mat.shape)
+					total_confusion_mat+= confusion_mat
+					# print(total_confusion_mat)\
+
+					## These metrics don't work yet
 					# classwise_accuracy+= recall_score_class(actual_label, predicted_image).eval(session=sess)
 					# precision_score+= precision_score_class(actual_label, predicted_image).eval(session=sess)
 					# precision_score+= precision_score_class(actual_label, predicted_image).eval(session=sess)
@@ -421,14 +450,10 @@ class myUnet(object):
 					# recall_score+= recall_score_class(actual_label, predicted_image).eval(session=sess)
 					# sensitivity_score+= sensitivity(actual_label, predicted_image).eval(session=sess)
 
-					intersect_image_path = os.path.join(results_intersected_path, image_folder[iImage])
-					cv2.imwrite(intersect_image_path, intersect_image)
+					## Find the number of right and wrong pixels in every image
+					sum+= match/(float)(match+wrong)
 
-					confusion_mat = make_confusion_matrix(actual_label, predicted_image)
-					# print(confusion_mat.shape)
-					total_confusion_mat+= confusion_mat
-					# print(total_confusion_mat)
-
+					total_image_count+=1
 					iAll_images_per_index+=1
 
 				batch_start += batch_size
@@ -442,13 +467,13 @@ class myUnet(object):
 			#pixels in that row
 
 		
-		# print(image_count)
-		print ("Percentage: ", sum/(float)(image_count))
+		# print(total_image_count)
+		print ("Percentage: ", sum/(float)(total_image_count))
 		print("Confusion Matrix", total_confusion_mat)
 		print("Percentage Confusion Matrix", total_confusion_mat_percent)
 		# print("Classwise accuracy", classwise_accuracy)
-		# print("Precision",precision_score/(float)(image_count))
-		# print("Recall", recall_score/(float)(image_count))
+		# print("Precision",precision_score/(float)(total_image_count))
+		# print("Recall", recall_score/(float)(total_image_count))
 		# print("Sensitivity", sensitivity_score)
 		predicted_mask_path =  os.path.join(npy_path, 'imgs_predicted_mask_test.npy')
 		np.save(predicted_mask_path, predicted_label_array_big)
