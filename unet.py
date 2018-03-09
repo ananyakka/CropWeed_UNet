@@ -11,26 +11,29 @@ os.environ['PYTHONHASHSEED'] = '0'
 #os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import numpy as np
 from keras.models import *
-from keras.layers import Input, Concatenate, Add, Conv2D, MaxPooling2D, UpSampling2D, Dropout, Cropping2D, Activation, Reshape
+from keras.layers import Input,Add, Conv2D, MaxPooling2D, UpSampling2D, Dropout, Cropping2D, Activation, Reshape
+from keras.layers.merge import concatenate
 from keras.activations import softmax
 from keras.optimizers import *
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler, EarlyStopping,ReduceLROnPlateau
 from keras import backend as keras
+from keras. preprocessing.image import *
 from train_params import *
-from PIL import Image
+# from PIL import Image
 import cv2
 import tensorflow as tf
 import random as rn
 import time
+import math
 from utils import *
 from sklearn.model_selection import StratifiedKFold, KFold
-from make_confusion_matrix import make_confusion_matrix
 from sklearn.utils.class_weight import compute_class_weight, compute_sample_weight
 from keras.utils.generic_utils import get_custom_objects
 
 from sklearn.metrics import f1_score
 from train_params import f_score_weighted_loss, f_score_weighted , weighted_dice_coef_loss, weighted_dice_coef
 from data_generator import my_generator #my_generator(filepath, labelpath, x_set_indices, batch_size)
+import pickle
 
 class myUnet(object):
 
@@ -61,29 +64,29 @@ class myUnet(object):
 		drop4 = Dropout(0.5)(conv4)
 		pool4 = MaxPooling2D(pool_size=(2, 2))(drop4)
 
-		conv5 = Conv2D(int(self.img_rows*2), 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(pool4)
-		conv5 = Conv2D(int(self.img_rows*2), 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv5)
-		drop5 = Dropout(0.5)(conv5)
+		# conv5 = Conv2D(int(self.img_rows*2), 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(pool4)
+		# conv5 = Conv2D(int(self.img_rows*2), 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv5)
+		# drop5 = Dropout(0.5)(conv5)
 
-		up6 = Conv2D(int(self.img_rows), 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling2D(size = (2,2))(drop5))
-		merge6 = Concatenate([drop4,up6], axis=-1)
-		# merge6 = merge([drop4,up6], mode = 'concat', concat_axis = 3)
-		conv6 = Conv2D(int(self.img_rows), 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge6)
-		conv6 = Conv2D(int(self.img_rows), 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv6)
+		# up6 = Conv2D(int(self.img_rows), 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling2D(size = (2,2))(drop5))
+		# merge6 = concatenate([drop4,up6])
+		# # merge6 = merge([drop4,up6], mode = 'concat', concat_axis = 3)
+		# conv6 = Conv2D(int(self.img_rows), 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge6)
+		# conv6 = Conv2D(int(self.img_rows), 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv6)
 
-		up7 = Conv2D(int(self.img_rows/2), 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling2D(size = (2,2))(conv6))
+		up7 = Conv2D(int(self.img_rows/2), 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling2D(size = (2,2))(drop4))
 		# up7 = Conv2D(int(self.img_rows/2), 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling2D(size = (2,2))(drop4))
-		merge7 = Concatenate([conv3,up7], axis=-1)
+		merge7 = concatenate([conv3,up7])
 		conv7 = Conv2D(int(self.img_rows/2), 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge7)
 		conv7 = Conv2D(int(self.img_rows/2), 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv7)
 
 		up8 = Conv2D(int(self.img_rows/4), 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling2D(size = (2,2))(conv7))
-		merge7 = Concatenate([conv2,up8], axis=-1)
+		merge8 = concatenate([conv2,up8])
 		conv8 = Conv2D(int(self.img_rows/4), 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge8)
 		conv8 = Conv2D(int(self.img_rows/4), 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv8)
 
 		up9 = Conv2D(int(self.img_rows/8), 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling2D(size = (2,2))(conv8))
-		merge7 = Concatenate([conv1,up9], axis=-1)
+		merge9 = concatenate([conv1,up9])
 		conv9 = Conv2D(int(self.img_rows/8), 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge9)
 		conv9 = Conv2D(int(self.img_rows/8), 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
 
@@ -214,7 +217,7 @@ class myUnet(object):
 
 		#Split the indices into train, validation and test data
 		x_train_size1 = int(no_of_images *0.7)
-		x_train_size2 = int(no_of_images *0.6)
+		x_val_size1 = int(no_of_images*0.9)
 
 		x_train, x_val, x_test = np.split(indices_shuffled, [x_train_size1, x_val_size1])
 		print(x_train)
@@ -225,26 +228,27 @@ class myUnet(object):
 		training_generator = my_generator(filepath, labelpath, x_train, batch_size)
 		validation_generator = my_generator(filepath, labelpath, x_val, batch_size)
 		test_generator = my_generator(filepath, labelpath, x_test, 1)
+		
+		model = load_model('/extend_sda/Ananya_files/Weeding Bot Project/Codes/Keras TF/Segmentation/UNet/images_200by200/augmented/unet_trial21.hdf5', custom_objects={"mean_cross_entropy":mean_cross_entropy}) # load a trained model of unet
 
 		# model = self.get_unet()
-		model = load_model('/extend_sda/Ananya_files/Weeding Bot Project/Codes/Keras TF/Segmentation/UNet/images_200by200/augmented/unet_trial15.hdf5', custom_objects={"mean_cross_entropy":mean_cross_entropy}) # load a trained model of unet
-		print("got unet")
+		# print("got unet")
 
-		model_checkpoint = ModelCheckpoint('unet.hdf5', monitor='val_loss',verbose=1, save_best_only=True)
-		print('Fitting model...')
-		early_stopping = EarlyStopping(monitor='val_loss', min_delta = 0.0001, patience=5)
-		adjust_learning_rate = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, verbose=0, mode='auto', epsilon=0.0001, cooldown=0, min_lr=0)
+		# model_checkpoint = ModelCheckpoint('unet.hdf5', monitor='val_loss',verbose=1, save_best_only=True)
+		# print('Fitting model...')
+		# early_stopping = EarlyStopping(monitor='val_loss', min_delta = 0.0001, patience=5)
+		# adjust_learning_rate = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, verbose=0, mode='auto', epsilon=0.0001, cooldown=0, min_lr=0)
 		
-		start_time = time.time()
+		# start_time = time.time()
 
-		# model.fit_generator(training_generator, epochs=60, steps_per_epoch=2000, verbose=1, callbacks=[model_checkpoint], validation_data = validation_generator, validation_steps = 610 )
+		# # model.fit_generator(training_generator, epochs=60, steps_per_epoch=2000, verbose=1, callbacks=[model_checkpoint], validation_data = validation_generator, validation_steps = 610 )
 
-		model.fit_generator(training_generator, epochs=60, steps_per_epoch=2000, verbose=1, callbacks=[model_checkpoint, early_stopping, adjust_learning_rate], validation_data = validation_generator, validation_steps = 610 )
-		##steps are found by dividing total images by batch size; (68080/32 ~= 2127), (19536/32 ~= 610)
+		# model.fit_generator(training_generator, epochs=60, steps_per_epoch=2000, verbose=1, callbacks=[model_checkpoint, early_stopping, adjust_learning_rate], validation_data = validation_generator, validation_steps = 610 )
+		# ##steps are found by dividing total images by batch size; (68080/32 ~= 2127), (19536/32 ~= 610)
 
-		end_time = time.time()
-		total_mins = (end_time - start_time)/60
-		print("Training time: %0.2f min"% total_mins)
+		# end_time = time.time()
+		# total_mins = (end_time - start_time)/60
+		# print("Training time: %0.2f min"% total_mins)
 
 		print('predict test data')
 		start_time = time.time()
@@ -254,7 +258,7 @@ class myUnet(object):
 		# print(imgs_predicted_mask_test.shape)
 		# np.save('/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/imgs_predicted_mask_test702010.npy', imgs_predicted_mask_test)
 
-		predict_and_save(model,filepath, labelpath, x_test, save = True)
+		predict_and_save(model, filepath, labelpath, x_test, save = True)
 
 		end_time = time.time()
 		total_mins = (end_time - start_time)/60
@@ -264,6 +268,15 @@ class myUnet(object):
 		score = model.evaluate_generator(test_generator, steps=9768, max_queue_size=10, workers=1)
 		print('Test loss:', score[0])
 		print('Test accuracy:', score[1])
+
+		# # Save prediction to pickle file
+
+		# filepath = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/study_2/Images/'
+		# labelpath = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/study_2/Labels/'
+		# pickle_path = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/CompareStudy/study_2/'
+		# print('Saving predictions to pickle file')
+		# save_prediction_pickle(model,filepath, labelpath, pickle_path)
+
 
 	def save_img(self):
 
@@ -312,173 +325,219 @@ class myUnet(object):
 			overlay_path = os.path.join(results_combined_path+"/"+str(iMask)+".jpg")
 			cv2.imwrite(overlay_path, overlay_image)
 
-	def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
+def save_prediction_pickle(model,filepath, labelpath,pickle_path):
+	npy_path = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/'
 
-		rows = self.img_rows
-		cols = self.img_cols
-		classes = self.img_channels
+	image_folder = os.listdir(filepath)
+	label_folder = os.listdir(labelpath)
+	nImages = int(len(image_folder))
 
-		file_list = list(os.listdir(filepath))
-		label_list = list(os.listdir(labelpath))
-		batch_size = 1
+	prediction_pickle_map_path = os.path.join(pickle_path, 'prediction_pickle/')
+	if not os.path.exists(prediction_pickle_map_path):
+		os.makedirs(prediction_pickle_map_path)
 
-		sum = 0
-		total_image_count = 0
-		total_confusion_mat = np.zeros((classes,classes))
-		total_confusion_mat_percent = np.zeros((classes,classes))
-		predicted_label_array_big = np.empty([0, rows,cols,classes])
-		actual_label_array_big = np.empty([0, rows,cols,classes])
-		# classwise_accuracy = np.zeros(classes)
-		# precision_score= np.zeros(classes)
-		# recall_score= np.zeros(classes)
-		# sensitivity_score= np.zeros(classes)
+	for iImage in np.arange(nImages):
+		#load image to be segmented
+		image_path = os.path.join(filepath, image_folder[iImage])
+		test_img = cv2.imread(image_path)
+		test_img = cv2.resize(test_img, (200, 200), interpolation=cv2.INTER_NEAREST) 
+		test_img_exp=np.expand_dims(test_img, axis=0) #expand to make it 4D array for prediction
+
+		## Predict using the loaded model
+		predicted_label = model.predict(test_img_exp)
+		predicted_label = np.squeeze(predicted_label)
+
+		split_file = image_folder[iImage].split(".")
+		
+		pickle_path = os.path.join(prediction_pickle_map_path, split_file[0])
+		with open(pickle_path+'.pickle', 'wb') as file:
+			pickle.dump(predicted_label, file,protocol=pickle.HIGHEST_PROTOCOL)
+
+def predict_and_save(model,filepath, labelpath, x_set_indices, save = True):
+
+	rows = 200
+	cols = 200
+	classes = 3
+
+	file_list = list(os.listdir(filepath))
+	label_list = list(os.listdir(labelpath))
+	batch_size = 1
+
+	sum = 0
+	total_image_count = 0
+	total_confusion_mat = np.zeros((classes,classes))
+	total_confusion_mat_percent = np.zeros((classes,classes))
+	predicted_label_array_big = np.empty([0, rows,cols,classes])
+	actual_label_array_big = np.empty([0, rows,cols,classes])
+	# classwise_accuracy = np.zeros(classes)
+	total_precision= np.zeros((1,classes))
+	total_recall = np.zeros((1,classes))
+	total_f1score = np.zeros((1,classes))
+	# sensitivity_score= np.zeros(classes)
+
+	# Folders to save test images, predicted labels and their overlay
+	npy_path = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/'
+
+	for index in x_set_indices:
+
+		image_folder = os.listdir(os.path.join(filepath, file_list[index]))
+		label_folder = os.listdir(os.path.join(labelpath, label_list[index]))
+		# print(len(image_folder))
+		nBatch_in_folder = int(len(image_folder)/batch_size)
+
+		batch_start = 0
+		batch_end = batch_size
+		folder_total = len(image_folder)
+		print(folder_total)
+		predicted_label_array = np.ndarray((len(image_folder), rows,cols,3), dtype=np.float32)
+		actual_label_array = np.ndarray((len(image_folder), rows,cols,3), dtype=np.float32)
 
 		# Folders to save test images, predicted labels and their overlay
-		npy_path = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/'
+		results_path = os.path.join(npy_path,'results/'+file_list[index]+ '/')
+		if not os.path.exists(results_path):
+			os.makedirs(results_path)
+		results_test_images_path = os.path.join(npy_path,'results_test_images/'+file_list[index]+ '/') 
+		if not os.path.exists(results_test_images_path):
+			os.makedirs(results_test_images_path)		
+		results_combined_path = os.path.join(npy_path, 'results_combined/'+file_list[index]+ '/')
+		if not os.path.exists(results_combined_path):
+			os.makedirs(results_combined_path)	
+		results_intersected_path = os.path.join(npy_path, 'results_intersected/'+file_list[index]+ '/')
+		if not os.path.exists(results_intersected_path):
+			os.makedirs(results_intersected_path)
+		results_intensity_map_path = os.path.join(npy_path, 'results_intensity/'+file_list[index]+ '/')
+		if not os.path.exists(results_intensity_map_path):
+			os.makedirs(results_intensity_map_path)
+		results_jetIntensity_map_path = os.path.join(npy_path, 'results_jetIntensity/'+file_list[index]+ '/')
+		if not os.path.exists(results_jetIntensity_map_path):
+			os.makedirs(results_jetIntensity_map_path)
 
-		for index in x_set_indices:
+		iAll_images_per_index=0 
+		while batch_end<= folder_total: #always ignores the last few in each; fix this
 
-			image_folder = os.listdir(os.path.join(filepath, file_list[index]))
-			label_folder = os.listdir(os.path.join(labelpath, label_list[index]))
-			# print(len(image_folder))
-			nBatch_in_folder = int(len(image_folder)/batch_size)
+			limit = min(batch_end, folder_total)
+			list_images = range(batch_start,limit)
 
-			batch_start = 0
-			batch_end = batch_size
-			folder_total = len(image_folder)
-			predicted_label_array = np.ndarray((len(image_folder), rows,cols,3), dtype=np.float32)
-			actual_label_array = np.ndarray((len(image_folder), rows,cols,3), dtype=np.float32)
+			for iImage in list_images:
+				# print("Predicting Image")
+				
+				match = 0
+				wrong = 0
 
-			# Folders to save test images, predicted labels and their overlay
-			results_path = os.path.join(npy_path,'results/'+file_list[index]+ '/')
-			if not os.path.exists(results_path):
-				os.makedirs(results_path)
-			results_test_images_path = os.path.join(npy_path,'results_test_images/'+file_list[index]+ '/') 
-			if not os.path.exists(results_test_images_path):
-				os.makedirs(results_test_images_path)		
-			results_combined_path = os.path.join(npy_path, 'results_combined/'+file_list[index]+ '/')
-			if not os.path.exists(results_combined_path):
-				os.makedirs(results_combined_path)	
-			results_intersected_path = os.path.join(npy_path, 'results_intersected/'+file_list[index]+ '/')
-			if not os.path.exists(results_intersected_path):
-				os.makedirs(results_intersected_path)
-			results_intensity_map_path = os.path.join(npy_path, 'results_intensity/'+file_list[index]+ '/')
-			if not os.path.exists(results_intensity_map_path):
-				os.makedirs(results_intensity_map_path)
-			results_jetIntensity_map_path = os.path.join(npy_path, 'results_jetIntensity/'+file_list[index]+ '/')
-			if not os.path.exists(results_jetIntensity_map_path):
-				os.makedirs(results_jetIntensity_map_path)
+				## Save the test image					
+				current_image_path = os.path.join(filepath, file_list[index]+'/'+ image_folder[iImage])
+				test_img = cv2.imread(current_image_path)
+				test_img_exp=np.expand_dims(test_img, axis=0) #expand to make it 4D array for prediction
+				image_save_path = os.path.join(results_test_images_path, image_folder[iImage])
+				# test_img = cv2.cvtColor(test_img, cv2.COLOR_BGR2RGB) # converts to weird green color
+				cv2.imwrite(image_save_path, test_img) # write array to image
 
-			iAll_images_per_index=0 
-			while batch_end< folder_total: #always ignores the last few in each; fix this
+				## Predict on test data
+				predicted_label = model.predict(test_img_exp)
+				predicted_label = np.squeeze(predicted_label)
+				# predicted_label=predicted_label[0]
 
-				limit = min(batch_end, folder_total)
-				list_images = range(batch_start,limit)
+				## Save the prediction array
+				predicted_label_array[iAll_images_per_index] = predicted_label
 
-				for iImage in list_images:
-					
-					match = 0
-					wrong = 0
+				# print(predicted_label.shape)
 
-					## Save the test image					
-					# test_img = load_img(os.path.join(filepath, file_list[index])+'/'+ image_folder[iImage], grayscale = False)
-					current_image_path = os.path.join(filepath, file_list[index]+'/'+ image_folder[iImage])
-					test_img = cv2.imread(current_image_path)
-					test_img_exp=np.expand_dims(test_img, axis=0) #expand to make it 4D array for prediction
-					image_save_path = os.path.join(results_test_images_path, image_folder[iImage])
-					# print(file_list[index])
-					# print(image_folder[iImage])
-					cv2.imwrite(image_save_path, test_img)
+				## Save the prediction intensities as grayscale image
+				predicted_label_grayscale = make_grayscale_map(predicted_label)
+				intensity_map_path = os.path.join(results_intensity_map_path, image_folder[iImage])
+				cv2.imwrite(intensity_map_path, predicted_label_grayscale)# write array to image
 
-					## Predict on test data
-					predicted_label = model.predict(test_img_exp)
+				## Save the prediction intensities in jet color map image
+				# predicted_label_grayscale = cv2.imread(intensity_map_path)
+				predicted_label_jet = cv2.applyColorMap(predicted_label_grayscale, cv2.COLORMAP_JET)
+				jet_intensity_map_path = os.path.join(results_jetIntensity_map_path, image_folder[iImage])
+				cv2.imwrite(jet_intensity_map_path, predicted_label_jet)# write array to image
 
-					## Save the prediction array
-					predicted_label_array[iAll_images_per_index] = predicted_label
-					print(predicted_label.shape)
+				## Save the test label
+				predicted_label_path = os.path.join(results_path, image_folder[iImage])
+				# predicted_label = cv2.cvtColor(predicted_label*255, cv2.COLOR_BGR2RGB)
+				cv2.imwrite(predicted_label_path, cv2.cvtColor(predicted_label*255, cv2.COLOR_BGR2RGB))# write array to image
 
-					## Save the test label
-					print(predicted_label[0].shape)
-					# predicted_label = array_to_img(predicted_label)
-					predicted_label = array_to_img(predicted_label[0])					
-					predicted_label_path = os.path.join(results_path, image_folder[iImage])
-					predicted_label.save(predicted_label_path)
+				## to compare predicted label and actual label, and display red for wrong prediction and blue for correct predictions, pixel-wise
+				actual_label_path = os.path.join(labelpath, label_list[index]+'/'+ label_folder[iImage])
+				actual_label_original = cv2.imread(actual_label_path)
+				# print(actual_label_original.shape)
+				actual_label_array[iAll_images_per_index] = actual_label_original
+				actual_label=cv2.cvtColor(actual_label_original*255, cv2.COLOR_BGR2RGB)#actual_label is read as bgr
+				intersect_image, match, wrong = compare_image(actual_label, predicted_label) 
+				# print(match)
+				# print(wrong)
+				intersect_image_path = os.path.join(results_intersected_path, image_folder[iImage])
+				# intersect_image = cv2.cvtColor(intersect_image*255, cv2.COLOR_BGR2RGB)# BGR to RGB conversion already taken care of in compare_image
+				cv2.imwrite(intersect_image_path, intersect_image)# write array to image
 
-					## Save the prediction intensities
-					predicted_label_grayscale = make_grayscale_map(predicted_label)
-					predicted_label_grayscale = array_to_img(predicted_label_grayscale)
-					intensity_map_path = os.path.join(results_intensity_map_path, image_folder[iImage])
-					cv2.imwrite(intensity_map_path, predicted_label_grayscale)
+				## Overlay predicted label on image
+				predicted_image = cv2.imread(predicted_label_path)# need to read it again in cv2 to make it compatible with test_img for addWeighted
+				# print(predicted_image.shape)
+				combined_image = cv2.addWeighted(predicted_image, 0.4, test_img, 0.6, 0)
+				img_accuracy = match/(float)(match+wrong)*100
+				img_accuracy='%.3f' % img_accuracy
+				# print(img_accuracy)
+				font = cv2.FONT_HERSHEY_SIMPLEX
+				## maybe implement a find_pos algorithm to find a black space to put in the text
+				combined_image = cv2.putText(combined_image, str(img_accuracy), (110, 170), font, 0.8, (0,255,0), 1, cv2.LINE_AA)
+				overlay_path = os.path.join(results_combined_path, image_folder[iImage])
+				combined_image = cv2.cvtColor(combined_image, cv2.COLOR_BGR2RGB)
+				cv2.imwrite(overlay_path, combined_image)# write array to image
 
-					## Save the prediction intensities in jet color map
-					predicted_label_jet = cv2.applyColorMap(predicted_label_grayscale,cv2.COLORMAP_JET)
-					predicted_label_jet = array_to_img(predicted_label_jet)
-					jet_intensity_map_path = os.path.join(results_jetIntensity_map_path, image_folder[iImage])
-					cv2.imwrite(jet_intensity_map_path, predicted_label_jet)
+				## Find the confusion matrix and add it up for every image
+				confusion_mat = make_confusion_matrix(actual_label_original, predicted_image)
+				# print(confusion_mat.shape)
+				# make sure both are in bgr. cv2 creates array in bgr
+				total_confusion_mat+= confusion_mat
 
-					## Overlay predicted label on image
-					predicted_image = cv2.imread(path)
-					# print(type(predicted_image))
-					# print(predicted_image.shape)
-					# print(type(test_img))
-					# print(test_img.shape)
-					combined_image = cv2.addWeighted(predicted_image, 0.4, test_img, 0.6, 0)
-					overlay_path = os.path.join(results_combined_path, image_folder[iImage])
-					cv2.imwrite(overlay_path, combined_image)
+				precision, recall, f1score = find_precision_recall_f1score(actual_label_original, predicted_label)
 
-					## to compare predicted label and actual label, and display red for wrong prediction and blue for correct predictions, pixel-wise
-					actual_label_path = os.path.join(labelpath, label_list[index]+'/'+ label_folder[iImage])
-					actual_label = cv2.imread(actual_label_path)
-					actual_label_array[iAll_images_per_index] = actual_label
+				total_precision += precision
+				total_recall += recall
+				total_f1score +=f1score
 
-					## Save the image with red for wrong prediction and blue for correct predictions
-					intersect_image, match, wrong = compare_image(actual_label, predicted_image)
- 					intersect_image_path = os.path.join(results_intersected_path, image_folder[iImage])
-					cv2.imwrite(intersect_image_path, intersect_image)
+				## These metrics don't work yet
+				# classwise_accuracy+= recall_score_class(actual_label, predicted_image).eval(session=sess)
+				# sensitivity_score+= sensitivity(actual_label, predicted_image).eval(session=sess)
 
-					## Find the confusion matrix and add it up for every image
-					confusion_mat = make_confusion_matrix(actual_label, predicted_image)
-					# print(confusion_mat.shape)
-					total_confusion_mat+= confusion_mat
-					# print(total_confusion_mat)\
+				## Find the number of right and wrong pixels in every image
+				sum+= match/(float)(match+wrong)
+	
+				total_image_count+=1
+				iAll_images_per_index+=1
 
-					## These metrics don't work yet
-					# classwise_accuracy+= recall_score_class(actual_label, predicted_image).eval(session=sess)
-					# precision_score+= precision_score_class(actual_label, predicted_image).eval(session=sess)
-					# precision_score+= precision_score_class(actual_label, predicted_image).eval(session=sess)
-					# recall_score+= recall_score_class(actual_label, predicted_image).eval(session=sess)
-					# recall_score+= recall_score_class(actual_label, predicted_image).eval(session=sess)
-					# sensitivity_score+= sensitivity(actual_label, predicted_image).eval(session=sess)
+			batch_start += batch_size
+			batch_end += batch_size
 
-					## Find the number of right and wrong pixels in every image
-					sum+= match/(float)(match+wrong)
+		predicted_label_array_big=np.append(predicted_label_array_big, predicted_label_array, axis=0)
+		actual_label_array_big=np.append(actual_label_array_big, actual_label_array, axis=0)
 
-					total_image_count+=1
-					iAll_images_per_index+=1
+	overall_precision, overall_recall, overall_f1score = find_overall_precision_recall_f1score(total_confusion_mat)
 
-				batch_start += batch_size
-				batch_end += batch_size
+	for iRow in range(total_confusion_mat.shape[0]):
+		total_confusion_mat_percent[iRow, :] = total_confusion_mat[iRow, :]/ np.sum(total_confusion_mat[iRow, :]) # divide each row by total number of 
+		#pixels in that row
 
-			predicted_label_array_big=np.append(predicted_label_array_big, predicted_label_array, axis=0)
-			actual_label_array_big=np.append(actual_label_array_big, actual_label_array, axis=0)
+	
+	# print(total_image_count)
+	print("Label Order: Weeds, Background, Plants")
+	print ("Percentage: ", sum/(float)(total_image_count))
+	print("Confusion Matrix", total_confusion_mat)
+	print("Percentage Confusion Matrix", total_confusion_mat_percent)
+	# print("Classwise accuracy", classwise_accuracy)
 
-		for iRow in range(total_confusion_mat.shape[0]):
-			total_confusion_mat_percent[iRow, :] = total_confusion_mat[iRow, :]/ np.sum(total_confusion_mat[iRow, :]) # divide each row by total number of 
-			#pixels in that row
-
-		
-		# print(total_image_count)
-		print ("Percentage: ", sum/(float)(total_image_count))
-		print("Confusion Matrix", total_confusion_mat)
-		print("Percentage Confusion Matrix", total_confusion_mat_percent)
-		# print("Classwise accuracy", classwise_accuracy)
-		# print("Precision",precision_score/(float)(total_image_count))
-		# print("Recall", recall_score/(float)(total_image_count))
-		# print("Sensitivity", sensitivity_score)
-		predicted_mask_path =  os.path.join(npy_path, 'imgs_predicted_mask_test.npy')
-		np.save(predicted_mask_path, predicted_label_array_big)
-		true_mask_path =  os.path.join(npy_path, 'imgs_true_mask_test.npy')
-		np.save(true_mask_path, actual_label_array_big)
+	print("Mean Precision",total_precision/(float)(total_image_count))
+	print("Mean Recall", total_recall/(float)(total_image_count))
+	print("Mean F1 Score", total_f1score/(float)(total_image_count))
+	print("Overall Precision",overall_precision)
+	print("Overall Recall", overall_recall)
+	print("Overall F1 Score", overall_f1score)
+	# print("Sensitivity", sensitivity_score)
+	predicted_mask_path =  os.path.join(npy_path, 'imgs_predicted_mask_test.npy')
+	np.save(predicted_mask_path, predicted_label_array_big)
+	true_mask_path =  os.path.join(npy_path, 'imgs_true_mask_test.npy')
+	np.save(true_mask_path, actual_label_array_big)
 
 if __name__ == '__main__':
 

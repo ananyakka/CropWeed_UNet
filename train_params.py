@@ -64,8 +64,8 @@ def mean_cross_entropy(y_true, y_pred):
 	"""
 	# weight order: weeds, background, plants
 
-	# if len(K.int_shape(y_pred))== 4:
-	if K.int_shape(y_pred)[0] != 0:
+	# if len(K.int_shape(y_pred))!= 3:
+	if K.int_shape(y_true)[0] != None:
 		# scale predictions so that the class probas of each sample sum to 1
 		y_pred /= K.sum(y_pred, axis=-1, keepdims=True)
 		# clip to prevent NaN's and Inf's
@@ -82,10 +82,12 @@ def mean_cross_entropy(y_true, y_pred):
 		prop_samples = num_samples/total_samples
 		# weights = 1.0 - prop_samples
 
-		weights = [0.9, 0.05, 0.2]
+		weights = [0.9, 0.05, 0.1]
+		# weights= [0.9, 0.05, 0.5]
 
 		print(y_pred.shape)
 		batch_size = 32
+		# batch_size=K.int_shape(y_pred)[0]
 		loss = []
 		for iImage in range(batch_size):
 			loss_temp = y_true[iImage, ...] * K.log(y_pred[iImage, ...])*weights

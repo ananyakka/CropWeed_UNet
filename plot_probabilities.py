@@ -10,12 +10,13 @@ import matplotlib.pyplot as plt
 plt.ion()
 
 # load numpy array
-npypath = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/trial18/'
+npypath = '/extend_sda/Ananya_files/Weeding Bot Project/Farm Photos/Labelled Data/npydata/Augmented Data/trial20/'
 predicted_mask_path = os.path.join(npypath, 'imgs_predicted_mask_test.npy')
 true_mask_path = os.path.join(npypath, 'imgs_true_mask_test.npy')
 
 big_label_array = np.load(predicted_mask_path)
 big_true_label_array = np.load(true_mask_path)
+print('Finished loading data')
 
 bins = np.arange(0,1,0.1)
 predicted_label_histogram = np.zeros((big_label_array.shape[0],big_label_array.shape[-1], (len(bins)-1)))
@@ -56,9 +57,9 @@ if big_label_array.shape[0] == big_true_label_array.shape[0]:
 				true_label_histogram[iImage,iClass]= np.histogram(true_label_vector, bins)[0]
 
 
-				# plt.hist(data, bins, label=['predicted', 'true'])
-				# plt.legend(loc='upper right')
-				plt.hist(label_vector, bins)
+				plt.hist(data, bins, label=['predicted', 'true'])
+				plt.legend(loc='upper right')
+				# plt.hist(label_vector, bins)
 				plt.xlabel('Probability')
 				plt.ylabel('Number of Pixels')
 				plt.title('Probability Distribution')

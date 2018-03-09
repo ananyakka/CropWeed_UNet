@@ -3,6 +3,7 @@ Utility functions for UNet
 
 '''
 import numpy as np
+import cv2
 from sklearn.metrics import confusion_matrix
 
 
@@ -21,6 +22,8 @@ def compare_image(actual_label, predicted_image):
 	cv_red =np.array([0, 0, 255])
 
 	intersect_image = actual_label # copy label; we are changing only the green pixels
+	match = 0
+	wrong = 0
 
 	if predicted_image.shape == actual_label.shape:
 
@@ -77,7 +80,7 @@ def make_confusion_matrix(actual_label, predicted_label):
 				elif predicted_pixel.argmax(axis=-1) == 2:
 					predicted_label_flat[i_flat] = 3
 
-	return confusion_matrix(actual_label_flat, predicted_label_flat)
+	return confusion_matrix(actual_label_flat, predicted_label_flat, labels=[1,2,3])
 
 def make_grayscale_map(predicted_label):
 	'''
@@ -100,5 +103,66 @@ def make_grayscale_map(predicted_label):
 			elif predicted_pixel.argmax(axis=-1) == 2:
 				predicted_label_grayscale[iPixel,jPixel] = predicted_label[iPixel,jPixel, 2]
 
-	return predicted_label_grayscale
+	# need to convert pixels from 0-1 to 0-255 and then convert to grayscale			
+
+	predicted_label_grayscale = np.array(predicted_label_grayscale * 255, dtype = np.uint8)
+	# predicted_label_grayscale = cv2.cvtColor(predicted_label_grayscale, cv2.COLOR_BGR2GRAY)
+
+	return predicted_label_grayscale # to save as a visible image
+
+def find_precision_recall_f1score(actual_label, predicted_label):
+	confusion_matrix = make_confusion_matrix(actual_label, predicted_label)
+	nClasses = confusion_matrix.shape[0]
+	tp = np.zeros((1, nClasses))
+	fp = np.zeros((1, nClasses))
+	tn = np.zeros((1, nClasses))
+	fn = np.zeros((1, nClasses))
+	precision = np.zeros((1, nClasses))
+	recall = np.zeros((1, nClasses))
+	f1score = np.zeros((1, nClasses))
+
+
+	for iClass in range(nClasses):
+		tp[0, iClass] = confusion_matrix[iClass, iClass]
+		fp[0, iClass] = np.sum(confusion_matrix[:, iClass]) - tp[0, iClass]
+
+		fn[0, iClass] = np.sum(confusion_matrix[iClass, :]) - tp[0, iClass]
+		tn[0, iClass] = np.sum(confusion_matrix) - tp[0, iClass] - fp[0, iClass] - fn[0, iClass]
+
+		# precision= tp/(tp+fp)
+		precision[0, iClass] =  tp[0, iClass]/(tp[0, iClass] + fp[0, iClass])
+		recall[0, iClass] =  tp[0, iClass]/(tp[0, iClass] + fn[0, iClass])
+		f1score[0, iClass] = 2* precision[0, iClass]* recall[0, iClass]/(precision[0, iClass] + recall[0, iClass])
+
+	return precision, recall, f1score
+
+def find_overall_precision_recall_f1score(confusion_matrix):
+	nClasses = confusion_matrix.shape[0]
+	tp = np.zeros((1, nClasses))
+	fp = np.zeros((1, nClasses))
+	tn = np.zeros((1, nClasses))
+	fn = np.zeros((1, nClasses))
+	precision = np.zeros((1, nClasses))
+	recall = np.zeros((1, nClasses))
+	f1score = np.zeros((1, nClasses))
+
+
+	for iClass in range(nClasses):
+		tp[0, iClass] = confusion_matrix[iClass, iClass]
+		fp[0, iClass] = np.sum(confusion_matrix[:, iClass]) - tp[0, iClass]
+
+		fn[0, iClass] = np.sum(confusion_matrix[iClass, :]) - tp[0, iClass]
+		tn[0, iClass] = np.sum(confusion_matrix) - tp[0, iClass] - fp[0, iClass] - fn[0, iClass]
+
+		# precision= tp/(tp+fp)
+		precision[0, iClass] =  tp[0, iClass]/(tp[0, iClass] + fp[0, iClass])
+		recall[0, iClass] =  tp[0, iClass]/(tp[0, iClass] + fn[0, iClass])
+		f1score[0, iClass] = 2* precision[0, iClass]* recall[0, iClass]/(precision[0, iClass] + recall[0, iClass])
+
+	return precision, recall, f1score
+
+
+
+
+
 
